@@ -1,11 +1,20 @@
 import json
 import random
 import tkinter as tk
-# from tkinter import *
-# from tkinter.ttk import *
 
 
 global_list = []
+window = tk.Tk()
+window.title("Team Generator")
+
+team_data = {}
+label_object = list()
+player_checkbox = list()
+
+
+# class TeamPicker():
+#     def __init__(self):
+#         self.t = t
 
 class Person():
     def __init__(self, column, row, name):
@@ -33,103 +42,69 @@ class Person():
         global_list.remove(self.name)
 
 
-
-
-window = tk.Tk()
-
-window.title("Team Fortress 2 Team Picker")
-
-team_data = {}
-num_team_data = list()
-
-
-def chunker_list(seq, size):
+def split_list(seq, size):
     return (seq[i::size] for i in range(size))
 
-# def split_list(data):
-#     half = len(data)//2
-#     return data[:half], data[half:]
-
-# def shuffle_teams(data):
-#     random.shuffle(data)
-#     blue_team, red_team = split_list(data)
-
-#     return blue_team, red_team
 
 def shuffle_teams(data, n):
     random.shuffle(data)
-    teams = list(chunker_list(data, n))
+    teams = list(split_list(data, n))
 
     return teams
 
-with open("./team_list.json", "r") as wr:
-    team_data = json.load(wr)
 
-team_list = team_data["names"]
-num_of_team = team_data['numOfTeam'] if type(team_data['numOfTeam']) == int else int(team_data['numOfTeam'])
+def initialise_data():
 
-# print(num_of_team)
+    with open("./team_list.json", "r") as wr:
+        team_data = json.load(wr)
 
-for i in range(num_of_team):
-    num_team_data.append(tk.Label(window, text="", font=("Arial Bold", 10)))
+    team_list = team_data["names"]
+    num_of_team = team_data['numOfTeam'] if type(team_data['numOfTeam']) == int else int(team_data['numOfTeam'])
 
-# Team1 = tk.Label(window, text="", font=("Arial Bold", 10))
-# Team2 = tk.Label(window, text="", font=("Arial Bold", 10))
-
-    
-
-# btn = tk.Button(window, text="Generate", bg="#000000", fg="red", command=lambda: shuffle_teams(team_data, num_of_team))
-# btn.grid(column=1, row=0)
+    return team_list, num_of_team
 
 
-objs = list()
-column = 6
-row = 5
+def generate_labels(n):
 
-for i in range(len(team_list)):
-    
-    objs.append(Person(column, row, team_list[i]))
-    row+=1
+    for _ in range(n):
+        label_object.append(tk.Label(window, text="", font=("Arial Bold", 10)))
+
+
+def generate_player(num_of_players):
+
+    column = 6
+    row = 5
+    for i in range(num_of_players):       
+        player_checkbox.append(Person(column, row, team_list[i]))
+        row+=1
 
 
 def display_list():
 
-    test2 = shuffle_teams(global_list, num_of_team)
-    print(test2)
+    shuffled_teams = shuffle_teams(global_list, num_of_team)
+    print(shuffled_teams)
 
     column = 1
     row = 7
 
     for i in range(num_of_team):
-        num_team_data[i].configure(text=str(test2[i]))
-        num_team_data[i].grid(column=column, row=row)
+        label_object[i].configure(text=str(shuffled_teams[i]))
+        label_object[i].grid(column=column, row=row)
         row +=1
 
-    
 
-    # lbl.configure(text=str(test2[0]))
-    # lbl.grid(column=1, row=7)
+def generate_button(): 
 
-    # lbl2.configure(text=str(test2[1]))
-    # lbl2.grid(column=1, row=8)
-
-
-# def display_list():
-
-#     test2 = shuffle_teams(global_list)
-
-#     lbl.configure(text=str(test2[0]))
-#     lbl.grid(column=1, row=7)
-
-#     lbl2.configure(text=str(test2[1]))
-#     lbl2.grid(column=1, row=8)
-    
-
-btn2 = tk.Button(window, text="GENERATE TEAMS", bg="#bbede8", fg="#0003c9", command=display_list)
-btn2.grid(column=1, row=4)
+    btn2 = tk.Button(window, text="GENERATE TEAMS", bg="#bbede8", fg="#0003c9", command=display_list)
+    btn2.grid(column=5, row=4)
 
 
 if __name__ == "__main__":
+    team_list, num_of_team = initialise_data()
+    generate_labels(num_of_team)
+    generate_player(len(team_list))
+    generate_button()
+
     window.geometry('800x720')
     window.mainloop()
 
