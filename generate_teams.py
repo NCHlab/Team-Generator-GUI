@@ -15,7 +15,7 @@ root = tk.Tk()
 # frame2.pack(row=10, column=10)
 # root.iconbitmap("./icons/icon.ico")
 
-team_data = {}
+
 # label_object = list()
 # player_checkbox = list()
 
@@ -31,6 +31,7 @@ class App(tk.Frame):
         self.label_object = list()
         self.player_checkbox = list()
         self.shuffled_teams = list()
+        self.team_data = dict()
         self.username = None
         self.menu_opt = None
 
@@ -51,10 +52,10 @@ class App(tk.Frame):
 
 
         with open("./team_list.json", "r") as wr:
-            team_data = json.load(wr)
+            self.team_data = json.load(wr)
 
-        self.team_list = team_data.get("names", [])
-        self.num_of_team = team_data.get('numOfTeam',2) if type(team_data['numOfTeam']) == int else int(team_data.get('numOfTeam',2))
+        self.team_list = self.team_data.get("names", [])
+        self.num_of_team = self.team_data.get('numOfTeam',2) if type(self.team_data['numOfTeam']) == int else int(self.team_data.get('numOfTeam',2))
 
 
     def initialise_data(self):
@@ -69,7 +70,7 @@ class App(tk.Frame):
         self.frame2 = tk.LabelFrame(root, padx=5, pady=5) 
         self.frame2.grid(row=5, column =1)
 
-        column = 6
+        column = 6 # Need to track this in a self variable, or find way to destroy the player checkbox and re-create
         row = 5
         self.num_of_players = len(self.team_list)
         self.player_checkbox = []
@@ -173,12 +174,21 @@ class App(tk.Frame):
         json_file.close()
 
         if mode == "add":
-            self.player_checkbox.append(Person(14, 5, new_data,self.frame2))
+            # self.player_checkbox.append(Person(14, 5, new_data,self.frame2))
             # for i in self.player_checkbox:
-            #     i.frame2.destroy()
             #     i.chk.destroy()
+                # i.destroy_chk()
+            print("add")
+            # self.team_data["names"] = data["names"]
+
+            self.team_list = data["names"]
+            # self.load_data()
+            # self.frame2.grid_forget()
+            # self.frame2.destroy()
+
+            del self.player_checkbox
             #     i.destroy()
-            # self.generate_player()
+            self.generate_player()
 
         for i in self.label_object:
             i.destroy()
@@ -202,6 +212,9 @@ class Person():
         self._chk_state.set(False)
         self.chk = tk.Checkbutton(self.frame2, text=self.name, var=self._chk_state, command=lambda: self.check_active())
         self.chk.grid(column=self.column, row=self.row, sticky="w")
+
+    def destroy_chk(self):
+        return self.chk.destroy()
     
     def check_active(self):
         if self.name in global_list:
