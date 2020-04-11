@@ -28,31 +28,34 @@ class App(tk.Frame):
         self.team_list = None
         self.num_of_team = None
         self.num_of_players = None
-        self.label_object = list()
-        self.player_checkbox = list()
+        # self.label_object = list()
+        # self.player_checkbox = list()
         self.shuffled_teams = list()
         self.team_data = dict()
         self.username = None
         self.menu_opt = None
 
         self.settings_window = None
-        self.updated_text = None
+        # self.updated_text = None
 
         self.frame1 = tk.LabelFrame(self.master, padx=5, pady=5)
         self.frame1.grid(row=5, column =0)
 
-        self.frame = None
-        # self.frame2 = tk.LabelFrame(root, padx=5, pady=5) 
-        # self.frame2.grid(row=5, column =1)
+        # self.frame = None
+        self.frame2 = tk.LabelFrame(root, padx=5, pady=5) 
+        self.frame2.grid(row=5, column =1)
 
         self.initialise_data()
 
 
     def load_data(self):
 
-
-        with open("./team_list.json", "r") as wr:
-            self.team_data = json.load(wr)
+        try:
+            with open("./team_list.json", "r") as wr:
+                self.team_data = json.load(wr)
+        except json.decoder.JSONDecodeError:
+            messagebox.showerror(title= "File Format Incorrect", message="team_list.json Error, Please remove trailing comma from end of names & ensure it is JSON compliant")
+            exit()
 
         self.team_list = self.team_data.get("names", [])
         self.num_of_team = self.team_data.get('numOfTeam',2) if type(self.team_data['numOfTeam']) == int else int(self.team_data.get('numOfTeam',2))
@@ -67,14 +70,14 @@ class App(tk.Frame):
 
     def generate_player(self):
 
-        self.frame2 = tk.LabelFrame(root, padx=5, pady=5) 
-        self.frame2.grid(row=5, column =1)
-
-        column = 6 # Need to track this in a self variable, or find way to destroy the player checkbox and re-create
-        row = 5
+        # self.frame2 = tk.LabelFrame(root, padx=5, pady=5) 
+        # self.frame2.grid(row=5, column =1)
         self.num_of_players = len(self.team_list)
-        self.player_checkbox = []
+        self.player_checkbox = list()
 
+        column = 6 
+        row = 5
+        
         for i in range(self.num_of_players):
             self.player_checkbox.append(Person(column, row, self.team_list[i],self.frame2))
             row+=1
@@ -84,7 +87,7 @@ class App(tk.Frame):
     def generate_labels(self):
 
         
-        self.label_object = []
+        self.label_object = list()
 
         for _ in range(self.num_of_team):
             self.label_object.append(tk.Label(self.frame1, text="", font=("Arial Bold", 10)))
@@ -152,10 +155,19 @@ class App(tk.Frame):
             new_data = self.username.get()
             self.username.delete(0, 'end')
             new_data = new_data.strip()
-            if new_data:
-                data["names"].append(new_data)
+
+            if new_data.lower() in map(lambda x:x.lower(),data["names"]):
+                self.updated_field = tk.Label(self.settings_window, text='Duplicate Error. Name Taken!', fg='red')
+                self.updated_field.grid(row=4, column=3)
+                self.updated_field.after(1500, self.updated_field.destroy)
+            elif new_data:
+                data["names"].append(new_data.title())
             else:
+                self.updated_field = tk.Label(self.settings_window, text='Field is Empty', fg='red')
+                self.updated_field.grid(row=4, column=3)
+                self.updated_field.after(1000, self.updated_field.destroy)
                 return
+            
         elif mode == "delete":
             pass
         else:
@@ -178,7 +190,7 @@ class App(tk.Frame):
             # for i in self.player_checkbox:
             #     i.chk.destroy()
                 # i.destroy_chk()
-            print("add")
+            # print("add")
             # self.team_data["names"] = data["names"]
 
             self.team_list = data["names"]
@@ -187,7 +199,7 @@ class App(tk.Frame):
             # self.frame2.destroy()
 
             del self.player_checkbox
-            #     i.destroy()
+            # self.frame2.destroy()
             self.generate_player()
 
         for i in self.label_object:
@@ -246,7 +258,6 @@ if __name__ == "__main__":
 
     if not os.path.exists("team_list.json"):
         response = messagebox.askyesno(title= "File does not exist", message="team_list.json does not exist. Create this file now?")
-        print(response)
         if response:
             with open("team_list.json", 'w') as write_file:
                 json.dump({"names": [],"numOfTeam": 2}, write_file, indent=4)
@@ -254,8 +265,6 @@ if __name__ == "__main__":
             exit()
 
     
-    # initialise_data()
-    # App((root).pack(side="top", fill="both", expand=True))
     obj = App(root)
     root.geometry('800x720')
     root.mainloop()
