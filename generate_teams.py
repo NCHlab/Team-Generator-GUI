@@ -25,17 +25,17 @@ class App(tk.Frame):
         self.master = master
         master.title("Team Generator")
 
-        self.team_list = None
-        self.num_of_team = None
-        self.num_of_players = None
+        # self.team_list = None
+        # self.num_of_team = None
+        # self.num_of_players = None
         # self.label_object = list()
         # self.player_checkbox = list()
-        self.shuffled_teams = list()
-        self.team_data = dict()
-        self.username = None
-        self.menu_opt = None
+        # self.shuffled_teams = list()
+        # self.team_data = dict()
+        # self.username = None
+        # self.menu_opt = None
 
-        self.settings_window = None
+        # self.settings_window = None
         # self.updated_text = None
 
         self.frame1 = tk.LabelFrame(self.master, padx=5, pady=5)
@@ -56,6 +56,8 @@ class App(tk.Frame):
         except json.decoder.JSONDecodeError:
             messagebox.showerror(title= "File Format Incorrect", message="team_list.json Error, Please remove trailing comma from end of names & ensure it is JSON compliant")
             exit()
+
+        self.team_data["names"] = list(map(lambda x: x.title(), self.team_data["names"]))
 
         self.team_list = self.team_data.get("names", [])
         self.num_of_team = self.team_data.get('numOfTeam',2) if type(self.team_data['numOfTeam']) == int else int(self.team_data.get('numOfTeam',2))
@@ -135,6 +137,7 @@ class App(tk.Frame):
         update_btn = tk.Button(self.settings_window, text="Update", bg="#e0dcdd", fg="#ff195e",command=lambda: self.update_team_list("update"))
         update_btn.grid(row=1, column=0, columnspan=2, pady=10, padx=10, ipadx=60)
 
+        #####
         username_label = tk.Label(self.settings_window, text="Username")
         username_label.grid(row=3, column=0)
 
@@ -144,6 +147,17 @@ class App(tk.Frame):
         add_btn = tk.Button(self.settings_window, text="Add User", bg="#e0dcdd", fg="#ff195e",command=lambda: self.update_team_list("add"))
         add_btn.grid(row=4, column=0, columnspan=2, pady=10, padx=10, ipadx=60)
 
+        #####
+        delete_user_label = tk.Label(self.settings_window, text="Delete User:")
+        delete_user_label.grid(row=5, column=0)
+
+        self.delete_user = tk.Entry(self.settings_window, width=30)
+        self.delete_user.grid(row=5, column =1)
+
+        delete_btn = tk.Button(self.settings_window, text="Delete User", bg="#e0dcdd", fg="#ff195e",command=lambda: self.update_team_list("delete"))
+        delete_btn.grid(row=6, column=0, columnspan=2, pady=10, padx=10, ipadx=60)
+
+
 
     def update_team_list(self, mode="update"):
 
@@ -151,12 +165,14 @@ class App(tk.Frame):
         data = json.load(json_file) 
         json_file.close()
 
+        data["names"] = list(map(lambda x: x.title(), data["names"]))
+
         if mode == "add":
             new_data = self.username.get()
             self.username.delete(0, 'end')
             new_data = new_data.strip()
 
-            if new_data.lower() in map(lambda x:x.lower(),data["names"]):
+            if new_data.title() in map(lambda x:x.title(),data["names"]):
                 self.updated_field = tk.Label(self.settings_window, text='Duplicate Error. Name Taken!', fg='red')
                 self.updated_field.grid(row=4, column=3)
                 self.updated_field.after(1500, self.updated_field.destroy)
@@ -169,7 +185,17 @@ class App(tk.Frame):
                 return
             
         elif mode == "delete":
-            pass
+            user_to_delete = self.delete_user.get()
+            self.delete_user.delete(0, 'end')
+            user_to_delete = user_to_delete.strip()
+            if user_to_delete.title() and user_to_delete.title() in data["names"]:
+                data["names"].remove(user_to_delete.title())
+            else:
+                self.updated_field = tk.Label(self.settings_window, text='Delete Failed. Name not in List', fg='red')
+                self.updated_field.grid(row=6, column=3)
+                self.updated_field.after(1000, self.updated_field.destroy)
+                return
+            
         else:
             self.num_of_team = self.menu_opt.get()
             data["numOfTeam"] = self.num_of_team
@@ -177,7 +203,7 @@ class App(tk.Frame):
             self.updated_text.grid(row=1, column=3)
             self.updated_text.after(1000, self.updated_text.destroy)
             
-            # self.updated_text.after(1000, lambda: self.updated_text.configure(text=""))
+
             
 
 
@@ -185,22 +211,19 @@ class App(tk.Frame):
         json_file.write(json.dumps(data, indent=4))
         json_file.close()
 
-        if mode == "add":
-            # self.player_checkbox.append(Person(14, 5, new_data,self.frame2))
-            # for i in self.player_checkbox:
-            #     i.chk.destroy()
-                # i.destroy_chk()
-            # print("add")
-            # self.team_data["names"] = data["names"]
+        if mode == "add" or mode == "delete":
+            for i in self.player_checkbox:
+                i.chk.destroy()
 
+                if i.user_in_globallist():
+                    i.deactivate_player()
+                
+            print(data["names"])
             self.team_list = data["names"]
-            # self.load_data()
-            # self.frame2.grid_forget()
-            # self.frame2.destroy()
-
             del self.player_checkbox
-            # self.frame2.destroy()
             self.generate_player()
+
+
 
         for i in self.label_object:
             i.destroy()
@@ -239,6 +262,9 @@ class Person():
     
     def deactivate_player(self):
         global_list.remove(self.name)
+
+    def user_in_globallist(self):
+        return self.name in global_list
 
 
 def split_list(seq, size):
