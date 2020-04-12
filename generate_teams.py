@@ -3,6 +3,8 @@ import json
 import random
 import tkinter as tk
 from tkinter import messagebox
+from tkinter import ttk
+from tkinter import filedialog
 
 
 global_list = []
@@ -23,15 +25,59 @@ class App(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master, height=42, width=42)
         self.master = master
+        # master.iconbitmap("./icons/icon.ico")
         master.title("Team Generator")
+
+        
+        self.load_menubar()
 
         self.frame1 = tk.LabelFrame(self.master, padx=5, pady=5)
         self.frame1.grid(row=5, column =0)
 
-        self.frame2 = tk.LabelFrame(root, padx=5, pady=5) 
+        self.frame2 = tk.LabelFrame(self.master, padx=5, pady=5) 
         self.frame2.grid(row=5, column =1)
 
         self.initialise_data()
+
+
+    def load_menubar(self):
+        menubar = tk.Menu(self.master)
+        
+        filemenu = tk.Menu(menubar, tearoff=0)
+        submenu = tk.Menu(filemenu, tearoff=0)
+        settingsmenu = tk.Menu(menubar, tearoff=0)
+
+        filemenu.add_cascade(label='Import', menu=submenu)
+        submenu.add_command(label="JSON File", command=lambda: self.import_custom_file())
+        
+        filemenu.add_command(label="Generate Teams", command=lambda: self.display_list())
+        filemenu.add_command(label="Settings", command=lambda: self.change_settings())
+        filemenu.add_separator()
+        filemenu.add_command(label="Exit", command=quit)
+        
+        settingsmenu.add_command(label="Generate New JSON", command=lambda: create_new_jsonfile("regen"))
+        settingsmenu.add_separator()
+        settingsmenu.add_command(label="About", command=lambda: self.display_list())
+
+        
+        menubar.add_cascade(label="File", menu=filemenu)
+        menubar.add_cascade(label="Help", menu=settingsmenu)
+
+        self.master.config(menu=menubar)
+
+
+    def import_custom_file(self):
+
+        ftypes = [('Json files', '*.json')]
+        dlg = filedialog.Open(self, filetypes = ftypes)
+        file_dir = dlg.show()
+
+        if file_dir != '':
+            data = json_local_load(file_dir)
+            json_local_write(data)
+            self.refresh_ui(data)
+
+            messagebox.showinfo(title= "Import Complete", message="File imported. The new settings file (team_list.json) can be found in the same directory as this program")
 
 
     def load_data(self):
@@ -47,6 +93,9 @@ class App(tk.Frame):
 
         self.team_list = self.team_data.get("names", [])
         self.num_of_team = self.team_data.get('numOfTeam',2) if type(self.team_data['numOfTeam']) == int else int(self.team_data.get('numOfTeam',2))
+
+        if not self.team_list:
+            self.change_settings()
 
 
     def initialise_data(self):
@@ -90,10 +139,14 @@ class App(tk.Frame):
 
 
     def generate_button(self): 
-        btn2 = tk.Button(self.master, text="GENERATE TEAMS", bg="#bbede8", fg="#0003c9",padx= 20, pady=14, command=lambda: self.display_list())
+        btn2 = ttk.Button(self.master, text="GENERATE TEAMS", command=lambda: self.display_list())
+        # btn2 = ttk.Button(self.master, text="GENERATE TEAMS", bg="#bbede8", fg="#0003c9",padx= 20, pady=14, command=lambda: self.display_list())
+
         btn2.grid(column=0, row=4)
 
-        settings_btn = tk.Button(self.master, text="Settings", bg="#e0dcdd", fg="#ff195e",padx= 20, pady=14, command=lambda: self.change_settings())
+        settings_btn = ttk.Button(self.master, text="Settings", command=lambda: self.change_settings())
+        # settings_btn = tk.Button(self.master, text="Settings", bg="#e0dcdd", fg="#ff195e",padx= 20, pady=14, command=lambda: self.change_settings())
+
         settings_btn.grid(column=1, row=4)
 
 
@@ -101,15 +154,29 @@ class App(tk.Frame):
         self.menu_opt = tk.IntVar()
         self.menu_opt.set(self.num_of_team)
 
+        def alwaysActiveStyle(widget):
+            widget.config(state="active")
+            widget.bind("<Leave>", lambda e: "break")
+
+        # print(ttk.Style().theme_names())
+        s = ttk.Style(self.master)
+        # s.theme_use('clam')
+        # s.configure('raised.TMenubutton', borderwidth=1)
+        s.configure('N.TButton', foreground='black')
+
         team_options = [2,3,4,5,6,7,8,9,10]
 
         dropdown_label = tk.Label(self.settings_window, text="Number of Teams")
         dropdown_label.grid(row=0, column=0)
 
-        team_Dropdown = tk.OptionMenu(self.settings_window, self.menu_opt, *team_options)
-        team_Dropdown.grid(row=0, column=1)
+        team_Dropdown = ttk.OptionMenu(self.settings_window, self.menu_opt, "Choose", *team_options)
+        # team_Dropdown = ttk.OptionMenu(self.settings_window, self.menu_opt, "Choose", *team_options,  style='N.TButton')
 
-        update_btn = tk.Button(self.settings_window, text="Update", bg="#e0dcdd", fg="#ff195e",command=lambda: self.update_team_list("update"))
+        alwaysActiveStyle(team_Dropdown)
+        team_Dropdown.grid(row=0, column=1)
+        team_Dropdown.focus()
+
+        update_btn = ttk.Button(self.settings_window, text="Update",command=lambda: self.update_team_list("update"))
         update_btn.grid(row=1, column=0, columnspan=2, pady=10, padx=10, ipadx=60)
 
     def username_add_widget(self):
@@ -119,7 +186,7 @@ class App(tk.Frame):
         self.username = tk.Entry(self.settings_window, width=30)
         self.username.grid(row=3, column =1)
 
-        add_btn = tk.Button(self.settings_window, text="Add User", bg="#e0dcdd", fg="#ff195e",command=lambda: self.update_team_list("add"))
+        add_btn = ttk.Button(self.settings_window, text="Add User",command=lambda: self.update_team_list("add"))
         add_btn.grid(row=4, column=0, columnspan=2, pady=10, padx=10, ipadx=60)
     
 
@@ -130,7 +197,9 @@ class App(tk.Frame):
         self.delete_user = tk.Entry(self.settings_window, width=30)
         self.delete_user.grid(row=5, column =1)
 
-        delete_btn = tk.Button(self.settings_window, text="Delete User", bg="#e0dcdd", fg="#ff195e",command=lambda: self.update_team_list("delete"))
+        delete_btn = ttk.Button(self.settings_window, text="Delete User",command=lambda: self.update_team_list("delete"))
+        # delete_btn = tk.Button(self.settings_window, text="Delete User", bg="#e0dcdd", fg="#ff195e",command=lambda: self.update_team_list("delete"))
+
         delete_btn.grid(row=6, column=0, columnspan=2, pady=10, padx=10, ipadx=60)
 
 
@@ -200,20 +269,41 @@ class App(tk.Frame):
         json_local_write(data)
 
         if mode == "add" or mode == "delete":
-            for i in self.player_checkbox:
-                i.chk.destroy() # Remove Checkbox Instance
+            self.refresh_ui(data)
+            # for i in self.player_checkbox:
+            #     i.chk.destroy() # Remove Checkbox Instance
 
-                if i.user_in_globallist():
-                    i.deactivate_player()
+            #     if i.user_in_globallist():
+            #         i.deactivate_player()
                 
-            self.team_list = data["names"]
-            del self.player_checkbox
-            self.generate_player()
+            # self.team_list = data["names"]
+            # del self.player_checkbox
+            # self.generate_player()
+        else:
+            self.refresh_labels()
+    
 
+    def refresh_ui(self, data):
 
+        for i in self.player_checkbox:
+            i.chk.destroy() # Remove Checkbox Instance
+
+            if i.user_in_globallist():
+                i.deactivate_player()
+            
+        self.team_list = data["names"]
+        del self.player_checkbox
+        self.generate_player()
 
         for i in self.label_object:
             i.destroy() # Remove label instances
+
+        self.generate_labels()
+    
+    
+    def refresh_labels(self):
+        for i in self.label_object:
+                i.destroy() # Remove label instances
 
         self.generate_labels()
 
@@ -265,8 +355,14 @@ def shuffle_teams(data, n):
     return teams
 
 
-def json_local_load():
-    json_file = open("team_list.json", "r")
+def json_local_load(*args):
+
+    if args:
+        file_path = args[0]
+        json_file = open(file_path, "r")
+    else:
+        json_file = open("team_list.json", "r")
+
     data = json.load(json_file) 
     json_file.close()
 
@@ -279,14 +375,20 @@ def json_local_write(data):
     json_file.close()
 
 
+def create_new_jsonfile(*args):
+    with open("team_list.json", 'w') as write_file:
+        json.dump({"names": [],"numOfTeam": 2}, write_file, indent=4)
+    
+    if args:
+        obj.change_settings()
+
 
 if __name__ == "__main__":
 
     if not os.path.exists("team_list.json"):
         response = messagebox.askyesno(title= "File does not exist", message="team_list.json does not exist. Create this file now?")
         if response:
-            with open("team_list.json", 'w') as write_file:
-                json.dump({"names": [],"numOfTeam": 2}, write_file, indent=4)
+            create_new_jsonfile()
         else:
             exit()
 
