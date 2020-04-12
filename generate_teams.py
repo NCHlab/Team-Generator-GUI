@@ -87,14 +87,17 @@ class App(tk.Frame):
                 self.team_data = json.load(wr)
         except json.decoder.JSONDecodeError:
             messagebox.showerror(title= "File Format Incorrect", message="team_list.json Error, Please remove trailing comma from end of names & ensure it is JSON compliant")
-            exit()
+            response = messagebox.askyesno(title= "", message="Create a new team_list.json?")
+            file_error(response)
+            with open("./team_list.json", "r") as wr:
+                self.team_data = json.load(wr)
 
         self.team_data["names"] = list(map(lambda x: x.title(), self.team_data["names"]))
 
         self.team_list = self.team_data.get("names", [])
         self.num_of_team = self.team_data.get('numOfTeam',2) if type(self.team_data['numOfTeam']) == int else int(self.team_data.get('numOfTeam',2))
 
-        if not self.team_list:
+        if not self.team_list: # Option menu provided to add new users
             self.change_settings()
 
 
@@ -270,15 +273,6 @@ class App(tk.Frame):
 
         if mode == "add" or mode == "delete":
             self.refresh_ui(data)
-            # for i in self.player_checkbox:
-            #     i.chk.destroy() # Remove Checkbox Instance
-
-            #     if i.user_in_globallist():
-            #         i.deactivate_player()
-                
-            # self.team_list = data["names"]
-            # del self.player_checkbox
-            # self.generate_player()
         else:
             self.refresh_labels()
     
@@ -300,7 +294,7 @@ class App(tk.Frame):
 
         self.generate_labels()
     
-    
+
     def refresh_labels(self):
         for i in self.label_object:
                 i.destroy() # Remove label instances
@@ -383,14 +377,18 @@ def create_new_jsonfile(*args):
         obj.change_settings()
 
 
+def file_error(response):
+    
+    if response:
+        create_new_jsonfile()
+    else:
+        exit()
+
 if __name__ == "__main__":
 
     if not os.path.exists("team_list.json"):
         response = messagebox.askyesno(title= "File does not exist", message="team_list.json does not exist. Create this file now?")
-        if response:
-            create_new_jsonfile()
-        else:
-            exit()
+        file_error(response)
 
     
     obj = App(root)
