@@ -126,6 +126,9 @@ class App(tk.Frame):
         row = 5
         
         for i in range(self.num_of_players):
+            if i%10 == 0:
+                column+=1
+                row=5
             self.player_checkbox.append(Person(column, row, self.team_list[i],self.frame2))
             row+=1
 
