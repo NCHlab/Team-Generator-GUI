@@ -46,24 +46,34 @@ class App(tk.Frame):
         filemenu = tk.Menu(menubar, tearoff=0)
         submenu = tk.Menu(filemenu, tearoff=0)
         settingsmenu = tk.Menu(menubar, tearoff=0)
+        helpmenu = tk.Menu(menubar, tearoff=0)
 
         filemenu.add_cascade(label='Import', menu=submenu)
         submenu.add_command(label="JSON File", command=lambda: self.import_custom_file())
         
         filemenu.add_command(label="Generate Teams", command=lambda: self.display_list())
-        filemenu.add_command(label="Settings", command=lambda: self.change_settings())
+        filemenu.add_command(label="Options", command=lambda: self.team_options())
         filemenu.add_separator()
-        filemenu.add_command(label="Exit", command=quit)
+        filemenu.add_command(label="Exit", command= lambda: exit())
         
-        settingsmenu.add_command(label="Generate New JSON", command=lambda: create_new_jsonfile("regen"))
-        settingsmenu.add_separator()
-        settingsmenu.add_command(label="About", command=lambda: self.display_list())
+        settingsmenu.add_command(label="Generate Empty List (JSON)", command=lambda: create_new_jsonfile("regen"))
+        settingsmenu.add_command(label="Modify Json File (Advanced)", command=lambda: messagebox.showinfo(title="!", message="Work In Progress, Coming Soon!"))
+        # settingsmenu.add_separator()
+        # settingsmenu.add_command(label="About", command=lambda: self.display_list())
+
+        helpmenu.add_command(label="How To Use", command=lambda: 1+1)
+        helpmenu.add_separator()
+        helpmenu.add_command(label="About", command=lambda: self.about_me())
 
         
         menubar.add_cascade(label="File", menu=filemenu)
-        menubar.add_cascade(label="Help", menu=settingsmenu)
+        menubar.add_cascade(label="Settings", menu=settingsmenu)
+        menubar.add_cascade(label="Help", menu=helpmenu)
 
         self.master.config(menu=menubar)
+
+    def about_me(self):
+        messagebox.showinfo(title="Thanks for using!", message="App Created Using TKinter.\nAuthor: Nayam Chowdhury\nWebsite: http://nayamc.com")
 
 
     def import_custom_file(self):
@@ -98,7 +108,7 @@ class App(tk.Frame):
         self.num_of_team = self.team_data.get('numOfTeam',2) if type(self.team_data['numOfTeam']) == int else int(self.team_data.get('numOfTeam',2))
 
         if not self.team_list: # Option menu provided to add new users
-            self.change_settings()
+            self.team_options()
 
 
     def initialise_data(self):
@@ -142,15 +152,37 @@ class App(tk.Frame):
 
 
     def generate_button(self): 
+        self.btnselectboxes = tk.StringVar()
+        self.btnselectboxes.set("Select All")
+
         btn2 = ttk.Button(self.master, text="GENERATE TEAMS", command=lambda: self.display_list())
         # btn2 = ttk.Button(self.master, text="GENERATE TEAMS", bg="#bbede8", fg="#0003c9",padx= 20, pady=14, command=lambda: self.display_list())
 
         btn2.grid(column=0, row=4)
 
-        settings_btn = ttk.Button(self.master, text="Settings", command=lambda: self.change_settings())
-        # settings_btn = tk.Button(self.master, text="Settings", bg="#e0dcdd", fg="#ff195e",padx= 20, pady=14, command=lambda: self.change_settings())
+        settings_btn = ttk.Button(self.master, text="Team Options", command=lambda: self.team_options())
+        # settings_btn = tk.Button(self.master, text="Team Options", bg="#e0dcdd", fg="#ff195e",padx= 20, pady=14, command=lambda: self.team_options())
 
         settings_btn.grid(column=1, row=4)
+
+        settings_btn = ttk.Button(self.master, textvariable=self.btnselectboxes, command=lambda: self.select_deselect_checkboxes())
+        settings_btn.grid(column=2, row=4)
+    
+    def select_deselect_checkboxes(self):
+        
+        if self.btnselectboxes.get() == "Select All":
+            self.btnselectboxes.set("DeSelect All")
+                
+            for i in self.player_checkbox:
+                i._chk_state.set(True)
+                i.activate_player()
+
+        else:
+            self.btnselectboxes.set("Select All")
+
+            for i in self.player_checkbox:
+                i._chk_state.set(False)
+                i.deactivate_player()
 
 
     def num_dropdown_widget(self):
@@ -169,47 +201,49 @@ class App(tk.Frame):
 
         team_options = [2,3,4,5,6,7,8,9,10]
 
-        dropdown_label = tk.Label(self.settings_window, text="Number of Teams")
+        dropdown_label = tk.Label(self.options_window, text="Number of Teams")
         dropdown_label.grid(row=0, column=0)
 
-        team_Dropdown = ttk.OptionMenu(self.settings_window, self.menu_opt, "Choose", *team_options)
-        # team_Dropdown = ttk.OptionMenu(self.settings_window, self.menu_opt, "Choose", *team_options,  style='N.TButton')
+        team_Dropdown = ttk.OptionMenu(self.options_window, self.menu_opt, "Choose", *team_options)
+        # team_Dropdown = ttk.OptionMenu(self.options_window, self.menu_opt, "Choose", *team_options,  style='N.TButton')
 
         alwaysActiveStyle(team_Dropdown)
         team_Dropdown.grid(row=0, column=1)
         team_Dropdown.focus()
 
-        update_btn = ttk.Button(self.settings_window, text="Update",command=lambda: self.update_team_list("update"))
+        update_btn = ttk.Button(self.options_window, text="Update",command=lambda: self.update_team_list("update"))
         update_btn.grid(row=1, column=0, columnspan=2, pady=10, padx=10, ipadx=60)
 
     def username_add_widget(self):
-        username_label = tk.Label(self.settings_window, text="Username")
+        username_label = tk.Label(self.options_window, text="Username")
         username_label.grid(row=3, column=0)
 
-        self.username = tk.Entry(self.settings_window, width=30)
+        self.username = tk.Entry(self.options_window, width=30)
         self.username.grid(row=3, column =1)
 
-        add_btn = ttk.Button(self.settings_window, text="Add User",command=lambda: self.update_team_list("add"))
+        add_btn = ttk.Button(self.options_window, text="Add User",command=lambda: self.update_team_list("add"))
         add_btn.grid(row=4, column=0, columnspan=2, pady=10, padx=10, ipadx=60)
     
 
     def username_del_widget(self):
-        delete_user_label = tk.Label(self.settings_window, text="Delete User:")
+        delete_user_label = tk.Label(self.options_window, text="Delete User:")
         delete_user_label.grid(row=5, column=0)
 
-        self.delete_user = tk.Entry(self.settings_window, width=30)
+        self.delete_user = tk.Entry(self.options_window, width=30)
         self.delete_user.grid(row=5, column =1)
 
-        delete_btn = ttk.Button(self.settings_window, text="Delete User",command=lambda: self.update_team_list("delete"))
-        # delete_btn = tk.Button(self.settings_window, text="Delete User", bg="#e0dcdd", fg="#ff195e",command=lambda: self.update_team_list("delete"))
+        delete_btn = ttk.Button(self.options_window, text="Delete User",command=lambda: self.update_team_list("delete"))
+        # delete_btn = tk.Button(self.options_window, text="Delete User", bg="#e0dcdd", fg="#ff195e",command=lambda: self.update_team_list("delete"))
 
         delete_btn.grid(row=6, column=0, columnspan=2, pady=10, padx=10, ipadx=60)
 
 
-    def change_settings(self):
-        self.settings_window = tk.Toplevel(self)
-        self.settings_window.title("Settings - Modify Team List")
-        self.settings_window.geometry('400x300')
+    def team_options(self):
+        self.options_window = tk.Toplevel(self)
+        self.options_window.title("Options - Modify Team List")
+        self.options_window.geometry('400x300')
+        self.options_window.attributes('-topmost', True) # Add infront at all times
+        self.options_window.update()
 
         self.num_dropdown_widget()
         self.username_add_widget()
@@ -222,13 +256,13 @@ class App(tk.Frame):
         new_data = new_data.strip()
 
         if new_data.title() in map(lambda x:x.title(),data["names"]):
-            self.updated_field = tk.Label(self.settings_window, text='Duplicate Error. Name Taken!', fg='red')
+            self.updated_field = tk.Label(self.options_window, text='Duplicate Error. Name Taken!', fg='red')
             self.updated_field.grid(row=4, column=3)
             self.updated_field.after(1500, self.updated_field.destroy)
         elif new_data:
             data["names"].append(new_data.title())
         else:
-            self.updated_field = tk.Label(self.settings_window, text='Field is Empty', fg='red')
+            self.updated_field = tk.Label(self.options_window, text='Field is Empty', fg='red')
             self.updated_field.grid(row=4, column=3)
             self.updated_field.after(1000, self.updated_field.destroy)
 
@@ -242,7 +276,7 @@ class App(tk.Frame):
         if user_to_delete.title() and user_to_delete.title() in data["names"]:
             data["names"].remove(user_to_delete.title())
         else:
-            self.updated_field = tk.Label(self.settings_window, text='Delete Failed. Name not in List', fg='red')
+            self.updated_field = tk.Label(self.options_window, text='Delete Failed. Name not in List', fg='red')
             self.updated_field.grid(row=6, column=3)
             self.updated_field.after(1000, self.updated_field.destroy)
 
@@ -251,7 +285,7 @@ class App(tk.Frame):
     def update_mode(self, data):
         self.num_of_team = self.menu_opt.get()
         data["numOfTeam"] = self.num_of_team
-        self.updated_text = tk.Label(self.settings_window, text='Number Updated!', fg='green')
+        self.updated_text = tk.Label(self.options_window, text='Number Updated!', fg='green')
         self.updated_text.grid(row=1, column=3)
         self.updated_text.after(1000, self.updated_text.destroy)
 
@@ -275,7 +309,7 @@ class App(tk.Frame):
             self.refresh_ui(data)
         else:
             self.refresh_labels()
-    
+
 
     def refresh_ui(self, data):
 
@@ -329,10 +363,12 @@ class Person():
             self.activate_player()
     
     def activate_player(self):
-        global_list.append(self.name)
+        if self.name not in global_list:
+            global_list.append(self.name)
     
     def deactivate_player(self):
-        global_list.remove(self.name)
+        if self.name in global_list:
+            global_list.remove(self.name)
 
     def user_in_globallist(self):
         return self.name in global_list
@@ -374,7 +410,8 @@ def create_new_jsonfile(*args):
         json.dump({"names": [],"numOfTeam": 2}, write_file, indent=4)
     
     if args:
-        obj.change_settings()
+        obj.refresh_ui({"names": [],"numOfTeam": 2})
+        obj.team_options()
 
 
 def file_error(response):
@@ -404,3 +441,14 @@ if __name__ == "__main__":
 
 # error handling, remove arrays that have empty data
 # error handling for file doesnt exist
+
+# create a new option to generate blank template
+
+# Add option to select all / deselect all
+
+# change settings to options
+
+# create a settings option > create blank template
+# 			 > custom modify text editor
+
+# Add a help option
