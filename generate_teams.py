@@ -44,10 +44,10 @@ class App(tk.Frame):
         
         # CheckBoxes
         self.frame2 = tk.LabelFrame(self.master, padx=5, pady=5, relief="solid") 
-        self.frame2.grid(row=1, column=0, sticky="nsw")
+        self.frame2.grid(row=1, column=1, sticky="nsew")
 
-        self.master.grid_columnconfigure(0, weight=0)
-        self.master.grid_columnconfigure(1, weight=1)
+        self.master.grid_columnconfigure(0, weight=1)
+        self.master.grid_columnconfigure(1, weight=0)
         self.master.grid_columnconfigure(2, weight=1)
 
         self.master.grid_rowconfigure(0, weight=0)
@@ -72,12 +72,17 @@ class App(tk.Frame):
         column = 0
 
         for i in range(self.num_of_team):
-            if i%3 == 0:
-                column=0
-                row+=1
-            self.team_obj.append(tk.LabelFrame(self.master, padx=5, pady=5, relief="flat"))
-            self.team_obj[i].grid(row=row, column=column, sticky="nesw")
-            column+=1
+            if self.num_of_team == 2:
+                self.team_obj.append(tk.LabelFrame(self.master, padx=5, pady=5, relief="flat"))
+                self.team_obj[i].grid(row=row, column=column, sticky="nesw")
+                column+=2
+            else:
+                if i%3 == 0:
+                    column=0
+                    row+=1
+                self.team_obj.append(tk.LabelFrame(self.master, padx=5, pady=5, relief="flat"))
+                self.team_obj[i].grid(row=row, column=column, sticky="nesw")
+                column+=1
 
 
     def load_menubar(self):
@@ -193,7 +198,8 @@ class App(tk.Frame):
             # label_object[i].configure(text=", \n".join(shuffled_teams[i]))
             self.label_object[i].configure(text=f"TEAM {i+1}\n"+"\n".join(self.shuffled_teams[i]), fg=colours[i], anchor="w")
             # self.label_object[i].configure(text=str(self.shuffled_teams[i]))
-            self.label_object[i].grid(column=column, row=row)
+            self.label_object[i].grid(column=column, row=row, sticky="e")
+            self.label_object[i].configure(anchor="center")
             row +=1
 
 
@@ -204,15 +210,15 @@ class App(tk.Frame):
         btn2 = ttk.Button(self.master, text="Generate Teams", command=lambda: self.display_list())
         # btn2 = ttk.Button(self.master, text="GENERATE TEAMS", bg="#bbede8", fg="#0003c9",padx= 20, pady=14, command=lambda: self.display_list())
 
-        btn2.grid(column=0, row=2)
+        btn2.grid(column=1, row=2)
 
         settings_btn = ttk.Button(self.master, text="Team Options", command=lambda: self.team_options())
         # settings_btn = tk.Button(self.master, text="Team Options", bg="#e0dcdd", fg="#ff195e",padx= 20, pady=14, command=lambda: self.team_options())
 
-        settings_btn.grid(column=0, row=3)
+        settings_btn.grid(column=1, row=3)
 
         select_btn = ttk.Button(self.master, textvariable=self.btnselectboxes, command=lambda: self.select_deselect_checkboxes())
-        select_btn.grid(column=0, row=0)
+        select_btn.grid(column=1, row=0)
     
     
     def select_deselect_checkboxes(self):
@@ -492,7 +498,7 @@ if __name__ == "__main__":
 
     
     obj = App(root)
-    root.geometry('800x720')
+    root.geometry('600x600')
     root.mainloop()
 
 # set it up so that a person enters the name into the file and then can adjust by ticking a box to select / deselect that person
