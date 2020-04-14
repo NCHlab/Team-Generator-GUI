@@ -23,7 +23,7 @@ root = tk.Tk()
 
 class App(tk.Frame):
     def __init__(self, master):
-        tk.Frame.__init__(self, master, height=42, width=42)
+        tk.Frame.__init__(self, master)
         self.master = master
         # master.iconbitmap("./icons/icon.ico")
         master.title("Team Generator")
@@ -31,11 +31,26 @@ class App(tk.Frame):
         
         self.load_menubar()
 
-        self.frame1 = tk.LabelFrame(self.master, padx=5, pady=5)
-        self.frame1.grid(row=5, column =1)
+        self.frame1 = tk.LabelFrame(self.master, padx=5, pady=5, relief="flat")
+        self.frame1.grid(row=1, column=2, sticky="nsw")
+        
 
-        self.frame2 = tk.LabelFrame(self.master, padx=5, pady=5) 
-        self.frame2.grid(row=5, column =0)
+
+        
+        # CheckBoxes
+        self.frame2 = tk.LabelFrame(self.master, padx=5, pady=5, relief="solid") 
+        self.frame2.grid(row=1, column=0, sticky="nsw")
+
+        self.master.grid_columnconfigure(0, weight=1)
+        self.master.grid_columnconfigure(1, weight=1)
+        self.master.grid_columnconfigure(3, weight=4)
+
+        self.master.grid_rowconfigure(0, weight=0)
+        self.master.grid_rowconfigure(1, weight=0)
+        self.master.grid_rowconfigure(2, weight=0)
+        self.master.grid_rowconfigure(3, weight=0)
+        self.master.grid_rowconfigure(4, weight=2)
+        self.master.grid_rowconfigure(5, weight=2)
 
         self.initialise_data()
 
@@ -158,18 +173,18 @@ class App(tk.Frame):
         self.btnselectboxes = tk.StringVar()
         self.btnselectboxes.set("Select All")
 
-        btn2 = ttk.Button(self.master, text="GENERATE TEAMS", command=lambda: self.display_list())
+        btn2 = ttk.Button(self.master, text="Generate Teams", command=lambda: self.display_list())
         # btn2 = ttk.Button(self.master, text="GENERATE TEAMS", bg="#bbede8", fg="#0003c9",padx= 20, pady=14, command=lambda: self.display_list())
 
-        btn2.grid(column=0, row=4)
+        btn2.grid(column=0, row=2)
 
         settings_btn = ttk.Button(self.master, text="Team Options", command=lambda: self.team_options())
         # settings_btn = tk.Button(self.master, text="Team Options", bg="#e0dcdd", fg="#ff195e",padx= 20, pady=14, command=lambda: self.team_options())
 
-        settings_btn.grid(column=1, row=4)
+        settings_btn.grid(column=0, row=3)
 
         select_btn = ttk.Button(self.master, textvariable=self.btnselectboxes, command=lambda: self.select_deselect_checkboxes())
-        select_btn.grid(column=2, row=4)
+        select_btn.grid(column=0, row=0)
     
     
     def select_deselect_checkboxes(self):
