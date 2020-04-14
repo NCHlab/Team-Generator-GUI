@@ -5,21 +5,11 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
 from tkinter import filedialog
-
+from sys import exit
 
 global_list = []
 root = tk.Tk()
-# root.title("Team Generator")
-# frame1 = tk.LabelFrame(root, padx=5, pady=5)
-# frame1.grid(row=5, column =0)
-# frame2 = tk.LabelFrame(root, padx=5, pady=5) 
-# frame2.grid(row=5, column =1)
-# frame2.pack(row=10, column=10)
-# root.iconbitmap("./icons/icon.ico")
 
-
-# label_object = list()
-# player_checkbox = list()
 
 class App(tk.Frame):
     def __init__(self, master):
@@ -28,24 +18,11 @@ class App(tk.Frame):
         # master.iconbitmap("./icons/icon.ico")
         master.title("Team Generator")
 
-        
-        self.load_menubar()
-
-        # self.frame1 = tk.LabelFrame(self.master, padx=5, pady=5, relief="flat")
-        # self.frame1.grid(row=1, column=2, sticky="nsw")
-        
-        self.load_data()
-        self.generate_frame_labels()
-
-        
-
-
-
-        
         # CheckBoxes
         self.frame2 = tk.LabelFrame(self.master, padx=5, pady=5, relief="solid") 
         self.frame2.grid(row=1, column=1, sticky="nsew")
 
+        # Grid Organisation
         self.master.grid_columnconfigure(0, weight=1)
         self.master.grid_columnconfigure(1, weight=0)
         self.master.grid_columnconfigure(2, weight=1)
@@ -64,25 +41,15 @@ class App(tk.Frame):
 
         self.initialise_data()
         
+    
+    def initialise_data(self):
 
-    def generate_frame_labels(self):
-        self.team_obj = []
-
-        row=4
-        column = 0
-
-        for i in range(self.num_of_team):
-            if self.num_of_team == 2:
-                self.team_obj.append(tk.LabelFrame(self.master, padx=5, pady=5, relief="flat"))
-                self.team_obj[i].grid(row=row, column=column, sticky="nesw")
-                column+=2
-            else:
-                if i%3 == 0:
-                    column=0
-                    row+=1
-                self.team_obj.append(tk.LabelFrame(self.master, padx=5, pady=5, relief="flat"))
-                self.team_obj[i].grid(row=row, column=column, sticky="nesw")
-                column+=1
+        self.load_menubar()
+        self.load_data()
+        self.generate_frame_labels() # frame1+
+        self.generate_labels()
+        self.generate_player()
+        self.generate_button()
 
 
     def load_menubar(self):
@@ -103,36 +70,20 @@ class App(tk.Frame):
         
         settingsmenu.add_command(label="Generate Empty List (JSON)", command=lambda: create_new_jsonfile("regen"))
         settingsmenu.add_command(label="Modify Json File (Advanced)", command=lambda: messagebox.showinfo(title="!", message="Work In Progress, Coming Soon!"))
-        # settingsmenu.add_separator()
-        # settingsmenu.add_command(label="About", command=lambda: self.display_list())
 
         helpmenu.add_command(label="How To Use", command=lambda: 1+1)
         helpmenu.add_separator()
         helpmenu.add_command(label="About", command=lambda: self.about_me())
 
-        
         menubar.add_cascade(label="File", menu=filemenu)
         menubar.add_cascade(label="Settings", menu=settingsmenu)
         menubar.add_cascade(label="Help", menu=helpmenu)
 
         self.master.config(menu=menubar)
 
+
     def about_me(self):
         messagebox.showinfo(title="Thanks for using!", message="App Created Using TKinter.\nAuthor: Nayam Chowdhury\nWebsite: http://nayamc.com")
-
-
-    def import_custom_file(self):
-
-        ftypes = [('Json files', '*.json')]
-        dlg = filedialog.Open(self, filetypes = ftypes)
-        file_dir = dlg.show()
-
-        if file_dir != '':
-            data = json_local_load(file_dir)
-            json_local_write(data)
-            self.refresh_ui(data)
-
-            messagebox.showinfo(title= "Import Complete", message="File imported. The new settings file (team_list.json) can be found in the same directory as this program")
 
 
     def load_data(self):
@@ -156,11 +107,45 @@ class App(tk.Frame):
             self.team_options()
 
 
-    def initialise_data(self):
-        
-        self.generate_labels()
-        self.generate_player()
-        self.generate_button()
+    def import_custom_file(self):
+
+        ftypes = [('Json files', '*.json')]
+        dlg = filedialog.Open(self, filetypes = ftypes)
+        file_dir = dlg.show()
+
+        if file_dir != '':
+            data = json_local_load(file_dir)
+            json_local_write(data)
+            self.refresh_ui(data)
+
+            messagebox.showinfo(title= "Import Complete", message="File imported. The new settings file (team_list.json) can be found in the same directory as this program")
+
+
+    def generate_frame_labels(self):
+        self.team_obj = []
+
+        row=4
+        column = 0
+
+        for i in range(self.num_of_team):
+            if self.num_of_team == 2:
+                self.team_obj.append(tk.LabelFrame(self.master, padx=5, pady=5, relief="flat"))
+                self.team_obj[i].grid(row=row, column=column, sticky="nesw")
+                column+=2
+            else:
+                if i%3 == 0:
+                    column=0
+                    row+=1
+                self.team_obj.append(tk.LabelFrame(self.master, padx=5, pady=5, relief="flat"))
+                self.team_obj[i].grid(row=row, column=column, sticky="nesw")
+                column+=1
+
+
+    def generate_labels(self):
+        self.label_object = list()
+
+        for i in range(self.num_of_team):
+            self.label_object.append(tk.Label(self.team_obj[i], text="", font=("Arial Bold", 10)))
 
 
     def generate_player(self):
@@ -178,26 +163,15 @@ class App(tk.Frame):
             row+=1
 
 
-    def generate_labels(self):
-        self.label_object = list()
-
-        for i in range(self.num_of_team):
-            self.label_object.append(tk.Label(self.team_obj[i], text="", font=("Arial Bold", 10)))
-
-
     def display_list(self):
         self.shuffled_teams = shuffle_teams(global_list, self.num_of_team)
-        print(self.shuffled_teams)
-
         colours = ["blue","red","green","#d69e02","#ff3df9","#00c9c9","black","purple","#bab700","#c900b2"]
 
         column = 1
         row = 7
 
         for i in range(self.num_of_team):
-            # label_object[i].configure(text=", \n".join(shuffled_teams[i]))
             self.label_object[i].configure(text=f"TEAM {i+1}\n"+"\n".join(self.shuffled_teams[i]), fg=colours[i], anchor="w")
-            # self.label_object[i].configure(text=str(self.shuffled_teams[i]))
             self.label_object[i].grid(column=column, row=row, sticky="e")
             self.label_object[i].configure(anchor="center")
             row +=1
@@ -208,13 +182,9 @@ class App(tk.Frame):
         self.btnselectboxes.set("Select All")
 
         btn2 = ttk.Button(self.master, text="Generate Teams", command=lambda: self.display_list())
-        # btn2 = ttk.Button(self.master, text="GENERATE TEAMS", bg="#bbede8", fg="#0003c9",padx= 20, pady=14, command=lambda: self.display_list())
-
         btn2.grid(column=1, row=2)
 
         settings_btn = ttk.Button(self.master, text="Team Options", command=lambda: self.team_options())
-        # settings_btn = tk.Button(self.master, text="Team Options", bg="#e0dcdd", fg="#ff195e",padx= 20, pady=14, command=lambda: self.team_options())
-
         settings_btn.grid(column=1, row=3)
 
         select_btn = ttk.Button(self.master, textvariable=self.btnselectboxes, command=lambda: self.select_deselect_checkboxes())
@@ -238,6 +208,18 @@ class App(tk.Frame):
                 i.deactivate_player()
 
 
+    def team_options(self):
+        self.options_window = tk.Toplevel(self)
+        self.options_window.title("Options - Modify Team List")
+        self.options_window.geometry('400x300')
+        self.options_window.attributes('-topmost', True) # Add infront at all times
+        self.options_window.update()
+
+        self.num_dropdown_widget()
+        self.username_add_widget()
+        self.username_del_widget()
+
+
     def num_dropdown_widget(self):
         self.menu_opt = tk.IntVar()
         self.menu_opt.set(self.num_of_team)
@@ -246,26 +228,23 @@ class App(tk.Frame):
             widget.config(state="active")
             widget.bind("<Leave>", lambda e: "break")
 
-        # print(ttk.Style().theme_names())
+
         s = ttk.Style(self.master)
-        # s.theme_use('clam')
-        # s.configure('raised.TMenubutton', borderwidth=1)
         s.configure('N.TButton', foreground='black')
 
-        team_options = [2,3,4,5,6,7,8,9,10]
+        team_options_list = [2,3,4,5,6,7,8,9,10]
 
         dropdown_label = tk.Label(self.options_window, text="Number of Teams")
         dropdown_label.grid(row=0, column=0)
 
-        team_Dropdown = ttk.OptionMenu(self.options_window, self.menu_opt, "Choose", *team_options)
-        # team_Dropdown = ttk.OptionMenu(self.options_window, self.menu_opt, "Choose", *team_options,  style='N.TButton')
-
+        team_Dropdown = ttk.OptionMenu(self.options_window, self.menu_opt, "Choose", *team_options_list)
         alwaysActiveStyle(team_Dropdown)
         team_Dropdown.grid(row=0, column=1)
         team_Dropdown.focus()
 
         update_btn = ttk.Button(self.options_window, text="Update",command=lambda: self.update_team_list("update"))
         update_btn.grid(row=1, column=0, columnspan=2, pady=10, padx=10, ipadx=60)
+
 
     def username_add_widget(self):
         username_label = tk.Label(self.options_window, text="Username")
@@ -286,75 +265,14 @@ class App(tk.Frame):
         self.delete_user.grid(row=5, column =1)
 
         delete_btn = ttk.Button(self.options_window, text="Delete User",command=lambda: self.update_team_list("delete"))
-        # delete_btn = tk.Button(self.options_window, text="Delete User", bg="#e0dcdd", fg="#ff195e",command=lambda: self.update_team_list("delete"))
-
         delete_btn.grid(row=6, column=0, columnspan=2, pady=10, padx=10, ipadx=60)
-
-
-    def team_options(self):
-        self.options_window = tk.Toplevel(self)
-        self.options_window.title("Options - Modify Team List")
-        self.options_window.geometry('400x300')
-        self.options_window.attributes('-topmost', True) # Add infront at all times
-        self.options_window.update()
-
-        self.num_dropdown_widget()
-        self.username_add_widget()
-        self.username_del_widget()
 
 
     def field_text(self, window, text, fg, row, column, timeout):
         self.updated_field = tk.Label(window, text=text, fg=fg)
         self.updated_field.grid(row=row, column=column)
         self.updated_field.after(timeout, self.updated_field.destroy)
-
-
-    def add_mode(self, data):
-        new_data = self.username.get()
-        self.username.delete(0, 'end')
-        new_data = new_data.strip()
-
-        if new_data.title() in map(lambda x:x.title(),data["names"]):
-            self.updated_field = tk.Label(self.options_window, text='Duplicate Error. Name Taken!', fg='red')
-            self.updated_field.grid(row=4, column=3)
-            self.updated_field.after(1500, self.updated_field.destroy)
-        elif new_data:
-            data["names"].append(new_data.title())
-            self.field_text(self.options_window, text='User Added', fg='green',row=4, column=3, timeout=1000)
-        else:
-            self.updated_field = tk.Label(self.options_window, text='Field is Empty', fg='red')
-            self.updated_field.grid(row=4, column=3)
-            self.updated_field.after(1000, self.updated_field.destroy)
-
-        self.username.focus_set()
-        return data
-
-
-    def delete_mode(self, data):
-        user_to_delete = self.delete_user.get()
-        self.delete_user.delete(0, 'end')
-        user_to_delete = user_to_delete.strip()
-
-        if user_to_delete.title() and user_to_delete.title() in data["names"]:
-            data["names"].remove(user_to_delete.title())
-        else:
-            self.updated_field = tk.Label(self.options_window, text='Delete Failed. Name not in List', fg='red')
-            self.updated_field.grid(row=6, column=3)
-            self.updated_field.after(1000, self.updated_field.destroy)
-
-        self.delete_user.focus_set()
-        return data
-
-
-    def update_mode(self, data):
-        self.num_of_team = self.menu_opt.get()
-        data["numOfTeam"] = self.num_of_team
-        self.updated_text = tk.Label(self.options_window, text='Number Updated!', fg='green')
-        self.updated_text.grid(row=1, column=3)
-        self.updated_text.after(1000, self.updated_text.destroy)
-
-        return data
-
+    
 
     def update_team_list(self, mode="update"):
         data = json_local_load()
@@ -373,6 +291,46 @@ class App(tk.Frame):
             self.refresh_ui(data)
         else:
             self.refresh_labels()
+
+
+    def add_mode(self, data):
+        new_data = self.username.get()
+        self.username.delete(0, 'end')
+        new_data = new_data.strip()
+
+        if new_data.title() in map(lambda x:x.title(),data["names"]):
+            self.field_text(self.options_window, text='Duplicate Error. Name Taken!', fg='red',row=4, column=3, timeout=1500)
+        elif new_data:
+            data["names"].append(new_data.title())
+            self.field_text(self.options_window, text='User Added', fg='green',row=4, column=3, timeout=1000)
+        else:
+            self.field_text(self.options_window, text='Field is Empty', fg='red',row=4, column=3, timeout=1000)
+
+        self.username.focus_set()
+        return data
+
+
+    def delete_mode(self, data):
+        user_to_delete = self.delete_user.get()
+        self.delete_user.delete(0, 'end')
+        user_to_delete = user_to_delete.strip()
+
+        if user_to_delete.title() and user_to_delete.title() in data["names"]:
+            data["names"].remove(user_to_delete.title())
+            self.field_text(self.options_window, text='User Deleted.', fg='green',row=6, column=3, timeout=1000)
+        else:
+            self.field_text(self.options_window, text='Delete Failed. Name not in List', fg='red',row=6, column=3, timeout=1000)
+
+        self.delete_user.focus_set()
+        return data
+
+
+    def update_mode(self, data):
+        self.num_of_team = self.menu_opt.get()
+        data["numOfTeam"] = self.num_of_team
+        self.field_text(self.options_window, text='Number Updated!', fg='green',row=1, column=3, timeout=1000)
+
+        return data
 
 
     def refresh_ui(self, data):
@@ -403,8 +361,6 @@ class App(tk.Frame):
 
         self.generate_frame_labels()
         self.generate_labels()
-
-
 
 
 
@@ -500,24 +456,3 @@ if __name__ == "__main__":
     obj = App(root)
     root.geometry('600x600')
     root.mainloop()
-
-# set it up so that a person enters the name into the file and then can adjust by ticking a box to select / deselect that person
-# make selected people green + bold
-# make unselected people black
-# create an active list of names
-
-# integrate into slack so it tells users the team & also say the number of regens made.
-
-# error handling, remove arrays that have empty data
-# error handling for file doesnt exist
-
-# create a new option to generate blank template
-
-# Add option to select all / deselect all
-
-# change settings to options
-
-# create a settings option > create blank template
-# 			 > custom modify text editor
-
-# Add a help option
