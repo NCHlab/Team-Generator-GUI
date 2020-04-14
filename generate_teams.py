@@ -32,10 +32,10 @@ class App(tk.Frame):
         self.load_menubar()
 
         self.frame1 = tk.LabelFrame(self.master, padx=5, pady=5)
-        self.frame1.grid(row=5, column =0)
+        self.frame1.grid(row=5, column =1)
 
         self.frame2 = tk.LabelFrame(self.master, padx=5, pady=5) 
-        self.frame2.grid(row=5, column =1)
+        self.frame2.grid(row=5, column =0)
 
         self.initialise_data()
 
@@ -54,7 +54,7 @@ class App(tk.Frame):
         filemenu.add_command(label="Generate Teams", command=lambda: self.display_list())
         filemenu.add_command(label="Options", command=lambda: self.team_options())
         filemenu.add_separator()
-        filemenu.add_command(label="Exit", command= lambda: exit())
+        filemenu.add_command(label="Exit", command= lambda: exit(0))
         
         settingsmenu.add_command(label="Generate Empty List (JSON)", command=lambda: create_new_jsonfile("regen"))
         settingsmenu.add_command(label="Modify Json File (Advanced)", command=lambda: messagebox.showinfo(title="!", message="Work In Progress, Coming Soon!"))
@@ -168,8 +168,9 @@ class App(tk.Frame):
 
         settings_btn.grid(column=1, row=4)
 
-        settings_btn = ttk.Button(self.master, textvariable=self.btnselectboxes, command=lambda: self.select_deselect_checkboxes())
-        settings_btn.grid(column=2, row=4)
+        select_btn = ttk.Button(self.master, textvariable=self.btnselectboxes, command=lambda: self.select_deselect_checkboxes())
+        select_btn.grid(column=2, row=4)
+    
     
     def select_deselect_checkboxes(self):
         
@@ -253,6 +254,12 @@ class App(tk.Frame):
         self.username_del_widget()
 
 
+    def field_text(self, window, text, fg, row, column, timeout):
+        self.updated_field = tk.Label(window, text=text, fg=fg)
+        self.updated_field.grid(row=row, column=column)
+        self.updated_field.after(timeout, self.updated_field.destroy)
+
+
     def add_mode(self, data):
         new_data = self.username.get()
         self.username.delete(0, 'end')
@@ -264,12 +271,15 @@ class App(tk.Frame):
             self.updated_field.after(1500, self.updated_field.destroy)
         elif new_data:
             data["names"].append(new_data.title())
+            self.field_text(self.options_window, text='User Added', fg='green',row=4, column=3, timeout=1000)
         else:
             self.updated_field = tk.Label(self.options_window, text='Field is Empty', fg='red')
             self.updated_field.grid(row=4, column=3)
             self.updated_field.after(1000, self.updated_field.destroy)
 
+        self.username.focus_set()
         return data
+
 
     def delete_mode(self, data):
         user_to_delete = self.delete_user.get()
@@ -283,7 +293,9 @@ class App(tk.Frame):
             self.updated_field.grid(row=6, column=3)
             self.updated_field.after(1000, self.updated_field.destroy)
 
+        self.delete_user.focus_set()
         return data
+
 
     def update_mode(self, data):
         self.num_of_team = self.menu_opt.get()
@@ -294,8 +306,8 @@ class App(tk.Frame):
 
         return data
 
-    def update_team_list(self, mode="update"):
 
+    def update_team_list(self, mode="update"):
         data = json_local_load()
         data["names"] = list(map(lambda x: x.title(), data["names"]))
 
@@ -422,7 +434,7 @@ def file_error(response):
     if response:
         create_new_jsonfile()
     else:
-        exit()
+        exit(0)
 
 if __name__ == "__main__":
 
