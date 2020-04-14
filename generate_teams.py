@@ -31,9 +31,14 @@ class App(tk.Frame):
         
         self.load_menubar()
 
-        self.frame1 = tk.LabelFrame(self.master, padx=5, pady=5, relief="flat")
-        self.frame1.grid(row=1, column=2, sticky="nsw")
+        # self.frame1 = tk.LabelFrame(self.master, padx=5, pady=5, relief="flat")
+        # self.frame1.grid(row=1, column=2, sticky="nsw")
         
+        self.load_data()
+        self.generate_frame_labels()
+
+        
+
 
 
         
@@ -41,18 +46,38 @@ class App(tk.Frame):
         self.frame2 = tk.LabelFrame(self.master, padx=5, pady=5, relief="solid") 
         self.frame2.grid(row=1, column=0, sticky="nsw")
 
-        self.master.grid_columnconfigure(0, weight=1)
+        self.master.grid_columnconfigure(0, weight=0)
         self.master.grid_columnconfigure(1, weight=1)
-        self.master.grid_columnconfigure(3, weight=4)
+        self.master.grid_columnconfigure(2, weight=1)
 
         self.master.grid_rowconfigure(0, weight=0)
         self.master.grid_rowconfigure(1, weight=0)
         self.master.grid_rowconfigure(2, weight=0)
         self.master.grid_rowconfigure(3, weight=0)
-        self.master.grid_rowconfigure(4, weight=2)
-        self.master.grid_rowconfigure(5, weight=2)
+        self.master.grid_rowconfigure(4, weight=1)
+        self.master.grid_rowconfigure(5, weight=1)
+        self.master.grid_rowconfigure(6, weight=1)
+        self.master.grid_rowconfigure(7, weight=1)
+        self.master.grid_rowconfigure(8, weight=1)
+        self.master.grid_rowconfigure(9, weight=1)
+        self.master.grid_rowconfigure(10, weight=1)
 
         self.initialise_data()
+        
+
+    def generate_frame_labels(self):
+        self.team_obj = []
+
+        row=4
+        column = 0
+
+        for i in range(self.num_of_team):
+            if i%3 == 0:
+                column=0
+                row+=1
+            self.team_obj.append(tk.LabelFrame(self.master, padx=5, pady=5, relief="flat"))
+            self.team_obj[i].grid(row=row, column=column, sticky="nesw")
+            column+=1
 
 
     def load_menubar(self):
@@ -127,7 +152,7 @@ class App(tk.Frame):
 
 
     def initialise_data(self):
-        self.load_data()
+        
         self.generate_labels()
         self.generate_player()
         self.generate_button()
@@ -151,20 +176,23 @@ class App(tk.Frame):
     def generate_labels(self):
         self.label_object = list()
 
-        for _ in range(self.num_of_team):
-            self.label_object.append(tk.Label(self.frame1, text="", font=("Arial Bold", 10)))
+        for i in range(self.num_of_team):
+            self.label_object.append(tk.Label(self.team_obj[i], text="", font=("Arial Bold", 10)))
 
 
     def display_list(self):
         self.shuffled_teams = shuffle_teams(global_list, self.num_of_team)
         print(self.shuffled_teams)
 
+        colours = ["blue","red","green","#d69e02","#ff3df9","#00c9c9","black","purple","#bab700","#c900b2"]
+
         column = 1
         row = 7
 
         for i in range(self.num_of_team):
             # label_object[i].configure(text=", \n".join(shuffled_teams[i]))
-            self.label_object[i].configure(text=str(self.shuffled_teams[i]))
+            self.label_object[i].configure(text=f"TEAM {i+1}\n"+"\n".join(self.shuffled_teams[i]), fg=colours[i], anchor="w")
+            # self.label_object[i].configure(text=str(self.shuffled_teams[i]))
             self.label_object[i].grid(column=column, row=row)
             row +=1
 
@@ -357,12 +385,17 @@ class App(tk.Frame):
             i.destroy() # Remove label instances
 
         self.generate_labels()
+        
     
 
     def refresh_labels(self):
+        for i in self.team_obj:
+            i.destroy()
+
         for i in self.label_object:
                 i.destroy() # Remove label instances
 
+        self.generate_frame_labels()
         self.generate_labels()
 
 
