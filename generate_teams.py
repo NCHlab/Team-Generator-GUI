@@ -167,6 +167,9 @@ class App(tk.Frame):
         self.shuffled_teams = shuffle_teams(global_list, self.num_of_team)
         colours = ["blue","red","green","#d69e02","#ff3df9","#00c9c9","black","purple","#bab700","#c900b2"]
 
+        if self.num_of_team > 10:
+            colours = colours + [random.choice(colours) for x in range(self.num_of_team)]
+
         column = 1
         row = 7
 
