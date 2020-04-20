@@ -98,9 +98,12 @@ class App(tk.Frame):
             with open("./team_list.json", "r") as wr:
                 self.team_data = json.load(wr)
 
+        # Format the data into Capital Letter for first letter: User.Smith
         self.team_data["names"] = list(map(lambda x: x.title(), self.team_data["names"]))
+        self.team_data["balance"] = list(map(lambda x: x.title(), self.team_data["balance"]))
 
         self.team_list = self.team_data.get("names", [])
+        self.team_list_balance = self.team_data.get("balance", [])
         self.num_of_team = self.team_data.get('numOfTeam',2) if type(self.team_data['numOfTeam']) == int else int(self.team_data.get('numOfTeam',2))
 
         if not self.team_list: # Option menu provided to add new users
@@ -115,11 +118,14 @@ class App(tk.Frame):
 
         if file_dir != '':
             data = json_local_load(file_dir)
-            json_local_write(data)
-            self.refresh_ui(data)
+            if "names" in data and "numOfTeam" in data:
+                json_local_write(data)
+                self.refresh_ui(data)
+                messagebox.showinfo(title= "Import Complete", message="File imported. The new settings file (team_list.json) can be found in the same directory as this program")
+            else:
+                messagebox.showerror(title="Error", message="Uploaded JSON file format incorrect. Please ensure 'names' and 'numOfTeam' fields are present.")
 
-            messagebox.showinfo(title= "Import Complete", message="File imported. The new settings file (team_list.json) can be found in the same directory as this program")
-
+            
 
     def generate_frame_labels(self):
         self.team_obj = []
@@ -164,7 +170,8 @@ class App(tk.Frame):
 
 
     def display_list(self):
-        self.shuffled_teams = shuffle_teams(global_list, self.num_of_team)
+
+        self.shuffled_teams = shuffle_teams(global_list, self.num_of_team, self.team_list_balance)
         colours = ["blue","red","green","#d69e02","#ff3df9","#00c9c9","black","purple","#bab700","#c900b2"]
 
         if self.num_of_team > 10:
@@ -406,9 +413,44 @@ def split_list(seq, size):
     return (seq[i::size] for i in range(size))
 
 
-def shuffle_teams(data, n):
-    random.shuffle(data)
-    teams = list(split_list(data, n))
+def shuffle_teams(data, num_of_team, players_to_balance):
+
+    # Create copy to not affect global / class instance
+    data = data.copy()
+    players_to_balance = players_to_balance.copy()
+
+    # Ensure Players are selected
+    if players_to_balance and data:
+
+        temp_list = []
+
+        for player in players_to_balance:
+            # Remove duplicates from list
+            if player in data:
+                data.remove(player)
+            else:
+                # Save to remove from balance list
+                temp_list.append(player)
+
+        # Remove from playing since they arent in data
+        for player in temp_list:
+            players_to_balance.remove(player)
+
+        random.shuffle(data)
+        teams = list(split_list(data, num_of_team))
+
+        random.shuffle(players_to_balance)
+        teams_balanced = list(split_list(players_to_balance, num_of_team))
+
+        # Add balanced players back into team
+        # As balanced players added to end, Shuffling to make GUI randomize list
+        for i in range(num_of_team):
+            teams[i] += teams_balanced[i]
+            random.shuffle(teams[i])
+
+    else:
+        random.shuffle(data)
+        teams = list(split_list(data, num_of_team))
 
     return teams
 
@@ -435,10 +477,10 @@ def json_local_write(data):
 
 def create_new_jsonfile(*args):
     with open("team_list.json", 'w') as write_file:
-        json.dump({"names": [],"numOfTeam": 2}, write_file, indent=4)
+        json.dump({"names": [],"numOfTeam": 2,"balance": []}, write_file, indent=4)
     
     if args:
-        obj.refresh_ui({"names": [],"numOfTeam": 2})
+        obj.refresh_ui({"names": [],"numOfTeam": 2,"balance": []})
         obj.team_options()
 
 
