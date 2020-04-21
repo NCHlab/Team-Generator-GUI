@@ -172,6 +172,7 @@ class App(tk.Frame):
             self.player_checkbox.append(Person(column, row, self.team_list[i],self.frame2))
             row+=1
 
+
     def set_slack_key(self):
 
         def set_key():
@@ -193,9 +194,6 @@ class App(tk.Frame):
         add_key_btn.grid(row=1, column=0, columnspan=1, pady=10, padx=10, ipadx=60)
 
         
-
-
-
     def process_for_slack(self):
         if hasattr(self, 'shuffled_teams'):
             response = send_to_slack(self.shuffled_teams)
@@ -476,6 +474,10 @@ def shuffle_teams(data, num_of_team, players_to_balance):
 
         random.shuffle(players_to_balance)
         teams_balanced = list(split_list(players_to_balance, num_of_team))
+        
+        # Sorting to try to distribute players fairly when re-combined
+        teams.sort(key=len, reverse=False)
+        teams_balanced.sort(key=len, reverse=True)
 
         # Add balanced players back into team
         # As balanced players added to end, Shuffling to make GUI randomize list
@@ -533,16 +535,19 @@ def send_to_slack(data):
         return "Fail"
 
     url = "https://hooks.slack.com/services/"+slack_key
-    
-    for e,i in enumerate(data):
+    response = []
 
-        text = ",\n ".join(i)
-        post_obj = {"text": f"TEAM {e+1}\n {text}"}
+    for num,players in enumerate(data):
+
+        text = ",\n ".join(players)
+        post_obj = {"text": f"TEAM {num+1}\n {text}"}
 
         myobj = json.dumps(post_obj)
-        x = requests.post(url, data=myobj)
+        resp = requests.post(url, data=myobj)
 
-        print(x.text)
+        response.append(resp.text)
+    
+    return response
 
 if __name__ == "__main__":
 
