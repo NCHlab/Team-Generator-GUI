@@ -6,6 +6,7 @@ from tkinter import messagebox
 from tkinter import ttk
 from tkinter import filedialog
 from sys import exit
+import requests
 
 global_list = []
 root = tk.Tk()
@@ -66,10 +67,13 @@ class App(tk.Frame):
         filemenu.add_command(label="Generate Teams", command=lambda: self.display_list())
         filemenu.add_command(label="Options", command=lambda: self.team_options())
         filemenu.add_separator()
+        filemenu.add_command(label="Send To Slack", command=lambda: self.process_for_slack())
+        filemenu.add_separator()
         filemenu.add_command(label="Exit", command= lambda: exit(0))
         
         settingsmenu.add_command(label="Generate Empty List (JSON)", command=lambda: create_new_jsonfile("regen"))
         settingsmenu.add_command(label="Modify Json File (Advanced)", command=lambda: messagebox.showinfo(title="!", message="Work In Progress, Coming Soon!"))
+        settingsmenu.add_command(label="Set Slack Key", command=lambda: self.set_slack_key())
 
         helpmenu.add_command(label="How To Use", command=lambda: 1+1)
         helpmenu.add_separator()
@@ -168,6 +172,37 @@ class App(tk.Frame):
             self.player_checkbox.append(Person(column, row, self.team_list[i],self.frame2))
             row+=1
 
+    def set_slack_key(self):
+
+        def set_key():
+            os.environ['SLACK_KEY2'] = self.slack_key_field.get()
+            self.slack_key_window.geometry('220x100')
+            self.field_text(self.slack_key_window, text='Key Set!', fg='green',row=2, column=0, timeout=1500)
+            self.slack_key_field.delete(0, 'end')
+            
+        self.slack_key_window = tk.Toplevel(self)
+        self.slack_key_window.title("Set Key")
+        self.slack_key_window.geometry('220x70')
+        self.slack_key_window.attributes('-topmost', True) # Add infront at all times
+        self.slack_key_window.update()
+
+        self.slack_key_field = tk.Entry(self.slack_key_window, width=30)
+        self.slack_key_field.grid(row=0, column =0)
+
+        add_key_btn = ttk.Button(self.slack_key_window, text="Add Slack Key",command=lambda: set_key())
+        add_key_btn.grid(row=1, column=0, columnspan=1, pady=10, padx=10, ipadx=60)
+
+        
+
+
+
+    def process_for_slack(self):
+        if hasattr(self, 'shuffled_teams'):
+            response = send_to_slack(self.shuffled_teams)
+            if response == "Fail":
+                messagebox.showwarning(title="Slack Message Failed", message="Please Set OS Environment Variable (Settings > Add Slack Key)")
+        else:
+            messagebox.showwarning(title="Players not generated", message="Please Generate a team first.")
 
     def display_list(self):
 
@@ -490,6 +525,24 @@ def file_error(response):
         create_new_jsonfile()
     else:
         exit(0)
+
+def send_to_slack(data):
+    try:
+        slack_key = os.environ['SLACK_KEY2']
+    except KeyError:
+        return "Fail"
+
+    url = "https://hooks.slack.com/services/"+slack_key
+    
+    for e,i in enumerate(data):
+
+        text = ",\n ".join(i)
+        post_obj = {"text": f"TEAM {e+1}\n {text}"}
+
+        myobj = json.dumps(post_obj)
+        x = requests.post(url, data=myobj)
+
+        print(x.text)
 
 if __name__ == "__main__":
 
