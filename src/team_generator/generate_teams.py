@@ -6,6 +6,7 @@ from tkinter import messagebox
 from tkinter import ttk
 from tkinter import filedialog
 from sys import exit
+import requests
 
 global_list = []
 root = tk.Tk()
@@ -66,10 +67,13 @@ class App(tk.Frame):
         filemenu.add_command(label="Generate Teams", command=lambda: self.display_list())
         filemenu.add_command(label="Options", command=lambda: self.team_options())
         filemenu.add_separator()
+        filemenu.add_command(label="Send To Slack", command=lambda: self.process_for_slack())
+        filemenu.add_separator()
         filemenu.add_command(label="Exit", command= lambda: exit(0))
         
         settingsmenu.add_command(label="Generate Empty List (JSON)", command=lambda: create_new_jsonfile("regen"))
         settingsmenu.add_command(label="Modify Json File (Advanced)", command=lambda: messagebox.showinfo(title="!", message="Work In Progress, Coming Soon!"))
+        settingsmenu.add_command(label="Set Slack Key", command=lambda: self.set_slack_key())
 
         helpmenu.add_command(label="How To Use", command=lambda: 1+1)
         helpmenu.add_separator()
@@ -98,9 +102,12 @@ class App(tk.Frame):
             with open("./team_list.json", "r") as wr:
                 self.team_data = json.load(wr)
 
+        # Format the data into Capital Letter for first letter: User.Smith
         self.team_data["names"] = list(map(lambda x: x.title(), self.team_data["names"]))
+        self.team_data["balance"] = list(map(lambda x: x.title(), self.team_data["balance"]))
 
         self.team_list = self.team_data.get("names", [])
+        self.team_list_balance = self.team_data.get("balance", [])
         self.num_of_team = self.team_data.get('numOfTeam',2) if type(self.team_data['numOfTeam']) == int else int(self.team_data.get('numOfTeam',2))
 
         if not self.team_list: # Option menu provided to add new users
@@ -115,11 +122,14 @@ class App(tk.Frame):
 
         if file_dir != '':
             data = json_local_load(file_dir)
-            json_local_write(data)
-            self.refresh_ui(data)
+            if "names" in data and "numOfTeam" in data:
+                json_local_write(data)
+                self.refresh_ui(data)
+                messagebox.showinfo(title= "Import Complete", message="File imported. The new settings file (team_list.json) can be found in the same directory as this program")
+            else:
+                messagebox.showerror(title="Error", message="Uploaded JSON file format incorrect. Please ensure 'names' and 'numOfTeam' fields are present.")
 
-            messagebox.showinfo(title= "Import Complete", message="File imported. The new settings file (team_list.json) can be found in the same directory as this program")
-
+            
 
     def generate_frame_labels(self):
         self.team_obj = []
@@ -163,9 +173,42 @@ class App(tk.Frame):
             row+=1
 
 
+    def set_slack_key(self):
+
+        def set_key():
+            os.environ['SLACK_KEY'] = self.slack_key_field.get()
+            self.slack_key_window.geometry('220x100')
+            self.field_text(self.slack_key_window, text='Key Set!', fg='green',row=2, column=0, timeout=1500)
+            self.slack_key_field.delete(0, 'end')
+
+        self.slack_key_window = tk.Toplevel(self)
+        self.slack_key_window.title("Set Key")
+        self.slack_key_window.geometry('220x70')
+        self.slack_key_window.attributes('-topmost', True) # Add infront at all times
+        self.slack_key_window.update()
+
+        self.slack_key_field = tk.Entry(self.slack_key_window, width=30)
+        self.slack_key_field.grid(row=0, column =0)
+
+        add_key_btn = ttk.Button(self.slack_key_window, text="Add Slack Key",command=lambda: set_key())
+        add_key_btn.grid(row=1, column=0, columnspan=1, pady=10, padx=10, ipadx=60)
+
+        
+    def process_for_slack(self):
+        if hasattr(self, 'shuffled_teams'):
+            response = send_to_slack(self.shuffled_teams)
+            if response == "Fail":
+                messagebox.showwarning(title="Slack Message Failed", message="Please Set OS Environment Variable (Settings > Add Slack Key)")
+        else:
+            messagebox.showwarning(title="Players not generated", message="Please Generate a team first.")
+
     def display_list(self):
-        self.shuffled_teams = shuffle_teams(global_list, self.num_of_team)
+
+        self.shuffled_teams = shuffle_teams(global_list, self.num_of_team, self.team_list_balance)
         colours = ["blue","red","green","#d69e02","#ff3df9","#00c9c9","black","purple","#bab700","#c900b2"]
+
+        if self.num_of_team > 10:
+            colours = colours + [random.choice(colours) for x in range(self.num_of_team)]
 
         column = 1
         row = 7
@@ -403,9 +446,48 @@ def split_list(seq, size):
     return (seq[i::size] for i in range(size))
 
 
-def shuffle_teams(data, n):
-    random.shuffle(data)
-    teams = list(split_list(data, n))
+def shuffle_teams(data, num_of_team, players_to_balance):
+
+    # Create copy to not affect global / class instance
+    data = data.copy()
+    players_to_balance = players_to_balance.copy()
+
+    # Ensure Players are selected
+    if players_to_balance and data:
+
+        temp_list = []
+
+        for player in players_to_balance:
+            # Remove duplicates from list
+            if player in data:
+                data.remove(player)
+            else:
+                # Save to remove from balance list
+                temp_list.append(player)
+
+        # Remove from playing since they arent in data
+        for player in temp_list:
+            players_to_balance.remove(player)
+
+        random.shuffle(data)
+        teams = list(split_list(data, num_of_team))
+
+        random.shuffle(players_to_balance)
+        teams_balanced = list(split_list(players_to_balance, num_of_team))
+        
+        # Sorting to try to distribute players fairly when re-combined
+        teams.sort(key=len, reverse=False)
+        teams_balanced.sort(key=len, reverse=True)
+
+        # Add balanced players back into team
+        # As balanced players added to end, Shuffling to make GUI randomize list
+        for i in range(num_of_team):
+            teams[i] += teams_balanced[i]
+            random.shuffle(teams[i])
+
+    else:
+        random.shuffle(data)
+        teams = list(split_list(data, num_of_team))
 
     return teams
 
@@ -432,10 +514,10 @@ def json_local_write(data):
 
 def create_new_jsonfile(*args):
     with open("team_list.json", 'w') as write_file:
-        json.dump({"names": [],"numOfTeam": 2}, write_file, indent=4)
+        json.dump({"names": [],"numOfTeam": 2,"balance": []}, write_file, indent=4)
     
     if args:
-        obj.refresh_ui({"names": [],"numOfTeam": 2})
+        obj.refresh_ui({"names": [],"numOfTeam": 2,"balance": []})
         obj.team_options()
 
 
@@ -445,6 +527,27 @@ def file_error(response):
         create_new_jsonfile()
     else:
         exit(0)
+
+def send_to_slack(data):
+    try:
+        slack_key = os.environ['SLACK_KEY']
+    except KeyError:
+        return "Fail"
+
+    url = "https://hooks.slack.com/services/"+slack_key
+    response = []
+
+    for num,players in enumerate(data):
+
+        text = ",\n ".join(players)
+        post_obj = {"text": f"TEAM {num+1}\n {text}"}
+
+        myobj = json.dumps(post_obj)
+        resp = requests.post(url, data=myobj)
+
+        response.append(resp.text)
+    
+    return response
 
 if __name__ == "__main__":
 
