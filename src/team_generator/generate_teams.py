@@ -175,11 +175,11 @@ class App(tk.Frame):
     def set_slack_key(self):
 
         def set_key():
-            os.environ['SLACK_KEY2'] = self.slack_key_field.get()
+            os.environ['SLACK_KEY'] = self.slack_key_field.get()
             self.slack_key_window.geometry('220x100')
             self.field_text(self.slack_key_window, text='Key Set!', fg='green',row=2, column=0, timeout=1500)
             self.slack_key_field.delete(0, 'end')
-            
+
         self.slack_key_window = tk.Toplevel(self)
         self.slack_key_window.title("Set Key")
         self.slack_key_window.geometry('220x70')
@@ -528,7 +528,7 @@ def file_error(response):
 
 def send_to_slack(data):
     try:
-        slack_key = os.environ['SLACK_KEY2']
+        slack_key = os.environ['SLACK_KEY']
     except KeyError:
         return "Fail"
 
