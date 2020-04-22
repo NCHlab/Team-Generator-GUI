@@ -79,39 +79,31 @@ class App:
         if activate:
             for i in self.player_obj:
                 i.activate_player()
+            return {"status": "ok", "message": "All Players Activated"}
         else:
             for i in self.player_obj:
                 i.deactivate_player()
+            return {"status": "ok", "message": "All Players Deactivated"}
 
     def deactivate_player(self, name):
         for i in self.player_obj:
             if i.name == name:
                 i.deactivate_player()
-                break
+                return {
+                    "status": "ok",
+                    "message": "Player Deactivated",
+                    "name": f"{name.title()}",
+                }
 
     def activate_player(self, name):
         for i in self.player_obj:
             if i.name == name:
                 i.activate_player()
-                break
-
-    def update_team_list(self, new_data, mode="update"):
-        data = json_local_load()
-        data["names"] = list(map(lambda x: x.title(), data["names"]))
-
-        if mode == "add":
-            data = self.add_mode(data, new_data)
-        elif mode == "delete":
-            data = self.delete_mode(data, new_data)
-        else:
-            data = self.update_mode(data, new_data)
-
-        json_local_write(data)
-
-        if mode == "add" or mode == "delete":
-            self.refresh_all_data(data)
-
-        return "Completed"
+                return {
+                    "status": "ok",
+                    "message": "Player Activated",
+                    "name": f"{name.title()}",
+                }
 
     def add_mode(self, name):
 
