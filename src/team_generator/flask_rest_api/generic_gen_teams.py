@@ -7,20 +7,17 @@ import requests
 global_list = []
 
 
-class App():
+class App:
     def __init__(self):
         self.initialise_data()
 
-    
     def initialise_data(self):
 
         self.load_data()
         self.generate_player()
 
-
     def about_me(self):
-        return ({"message":"Author: Nayam Chowdhury"},200)
-
+        return ({"message": "Author: Nayam Chowdhury"}, 200)
 
     def load_data(self):
 
@@ -34,13 +31,20 @@ class App():
                 self.team_data = json.load(wr)
 
         # Format the data into Capital Letter for first letter: User.Smith
-        self.team_data["names"] = list(map(lambda x: x.title(), self.team_data["names"]))
-        self.team_data["balance"] = list(map(lambda x: x.title(), self.team_data["balance"]))
+        self.team_data["names"] = list(
+            map(lambda x: x.title(), self.team_data["names"])
+        )
+        self.team_data["balance"] = list(
+            map(lambda x: x.title(), self.team_data["balance"])
+        )
 
         self.team_list = self.team_data.get("names", [])
         self.team_list_balance = self.team_data.get("balance", [])
-        self.num_of_team = self.team_data.get('numOfTeam',2) if type(self.team_data['numOfTeam']) == int else int(self.team_data.get('numOfTeam',2))
-
+        self.num_of_team = (
+            self.team_data.get("numOfTeam", 2)
+            if type(self.team_data["numOfTeam"]) == int
+            else int(self.team_data.get("numOfTeam", 2))
+        )
 
     def generate_player(self):
         self.num_of_players = len(self.team_list)
@@ -50,37 +54,34 @@ class App():
             self.player_obj.append(Person(self.team_list[i]))
         return self.player_obj
 
-
     def set_slack_key(self):
 
-        os.environ['SLACK_KEY'] = self.slack_key_field
+        os.environ["SLACK_KEY"] = self.slack_key_field
         return "Key Set"
-        
+
     def process_for_slack(self):
-        if hasattr(self, 'shuffled_teams'):
+        if hasattr(self, "shuffled_teams"):
             response = send_to_slack(self.shuffled_teams)
         else:
-            response = ({"text":"Failure, self has no attr: shuffled_teams"},404)
+            response = ({"text": "Failure, self has no attr: shuffled_teams"}, 404)
 
         return response
 
-
     def get_teams(self):
-        self.shuffled_teams = shuffle_teams(global_list, self.num_of_team, self.team_list_balance)
+        self.shuffled_teams = shuffle_teams(
+            global_list, self.num_of_team, self.team_list_balance
+        )
 
         return self.shuffled_teams
 
-    
-    
     def set_all_players(self, activate=True):
-        
+
         if activate:
             for i in self.player_obj:
                 i.activate_player()
         else:
             for i in self.player_obj:
                 i.deactivate_player()
-
 
     def deactivate_player(self, name):
         for i in self.player_obj:
@@ -94,7 +95,6 @@ class App():
                 i.activate_player()
                 break
 
-
     def update_team_list(self, new_data, mode="update"):
         data = json_local_load()
         data["names"] = list(map(lambda x: x.title(), data["names"]))
@@ -105,77 +105,105 @@ class App():
             data = self.delete_mode(data, new_data)
         else:
             data = self.update_mode(data, new_data)
-        
+
         json_local_write(data)
 
         if mode == "add" or mode == "delete":
             self.refresh_all_data(data)
 
+        return "Completed"
 
+    def add_mode(self, name):
 
+        data = json_local_load()
+        data["names"] = list(map(lambda x: x.title(), data["names"]))
 
-    def add_mode(self, data, name):
-
-        if name.title() in map(lambda x:x.title(),data["names"]):
-            pass #'Duplicate Error. Name Taken!'
+        if name.title() in map(lambda x: x.title(), data["names"]):
+            response = {
+                "status": "error",
+                "message": "Duplicate Error, Name Taken",
+                "name": f"{name.title()}",
+            }
         elif name:
             data["names"].append(name.title())
 
-        return data
+            json_local_write(data)
+            self.refresh_all_data(data)
 
+            response = {
+                "status": "ok",
+                "message": "Player Added",
+                "name": f"{name.title()}",
+            }
 
-    def delete_mode(self, data, name):
+        return response
+
+    def delete_mode(self, name):
+
+        data = json_local_load()
+        data["names"] = list(map(lambda x: x.title(), data["names"]))
 
         if name.title() and name.title() in data["names"]:
             data["names"].remove(name.title())
+
+            json_local_write(data)
+            self.refresh_all_data(data)
+
+            response = {
+                "status": "ok",
+                "message": "Player Deleted",
+                "name": f"{name.title()}",
+            }
         else:
-            pass #'Delete Failed. Name not in List'
+            response = {
+                "status": "error",
+                "message": "Delete Failed. Name not in List",
+                "name": f"{name.title()}",
+            }
 
-        return data
+        return response
 
+    def update_mode(self, num):
+        data = json_local_load()
 
-    def update_mode(self, data, num):
         self.num_of_team = num
         data["numOfTeam"] = self.num_of_team
+        json_local_write(data)
 
-        return data
+        response = {"status": "ok", "message": "Team Number Updated"}
 
+        return response
 
     def refresh_all_data(self, data):
 
         for i in self.player_obj:
             if i.user_in_globallist():
                 i.deactivate_player()
-            
+
         self.team_list = data["names"]
         del self.player_obj
         self.generate_player()
 
 
-
-class Person():
+class Person:
     def __init__(self, name):
 
         self.name = name
         self.check_active()
-    
 
     def check_active(self):
         if self.name in global_list:
             self.deactivate_player()
         else:
             self.activate_player()
-    
 
     def activate_player(self):
         if self.name not in global_list:
             global_list.append(self.name)
-    
 
     def deactivate_player(self):
         if self.name in global_list:
             global_list.remove(self.name)
-
 
     def user_in_globallist(self):
         return self.name in global_list
@@ -213,7 +241,7 @@ def shuffle_teams(data, num_of_team, players_to_balance):
 
         random.shuffle(players_to_balance)
         teams_balanced = list(split_list(players_to_balance, num_of_team))
-        
+
         # Sorting to try to distribute players fairly when re-combined
         teams.sort(key=len, reverse=False)
         teams_balanced.sort(key=len, reverse=True)
@@ -239,7 +267,7 @@ def json_local_load(*args):
     else:
         json_file = open("team_list.json", "r")
 
-    data = json.load(json_file) 
+    data = json.load(json_file)
     json_file.close()
 
     return data
@@ -252,31 +280,32 @@ def json_local_write(data):
 
 
 def create_new_jsonfile(*args):
-    with open("team_list.json", 'w') as write_file:
-        json.dump({"names": [],"numOfTeam": 2,"balance": []}, write_file, indent=4)
-    
+    with open("team_list.json", "w") as write_file:
+        json.dump({"names": [], "numOfTeam": 2, "balance": []}, write_file, indent=4)
+
     if args:
-        obj.refresh_ui({"names": [],"numOfTeam": 2,"balance": []})
+        obj.refresh_ui({"names": [], "numOfTeam": 2, "balance": []})
         obj.team_options()
 
 
 def file_error(response):
-    
+
     if response:
         create_new_jsonfile()
     else:
         exit(0)
 
+
 def send_to_slack(data):
     try:
-        slack_key = os.environ['SLACK_KEY']
+        slack_key = os.environ["SLACK_KEY"]
     except KeyError:
         return "Fail"
 
-    url = "https://hooks.slack.com/services/"+slack_key
+    url = "https://hooks.slack.com/services/" + slack_key
     response = []
 
-    for num,players in enumerate(data):
+    for num, players in enumerate(data):
 
         text = ",\n ".join(players)
         post_obj = {"text": f"TEAM {num+1}\n {text}"}
@@ -285,8 +314,9 @@ def send_to_slack(data):
         resp = requests.post(url, data=myobj)
 
         response.append(resp.text)
-    
+
     return response
+
 
 if __name__ == "__main__":
 
@@ -295,7 +325,6 @@ if __name__ == "__main__":
         if response == "y":
             file_error(response)
 
-    
     obj = App()
 
     print("test")
