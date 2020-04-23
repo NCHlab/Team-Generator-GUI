@@ -1,6 +1,10 @@
+import os
+from functools import wraps
+
 from flask_restful import Api, Resource, reqparse
 from flask import Flask, Blueprint, request
 from generic_gen_teams import App
+
 
 # from flask_restful import Api
 # from myapi.resources.add_players import AddPlayers
@@ -17,13 +21,27 @@ app.register_blueprint(blueprint)
 obj = App()
 
 # Require Token to use the API
+ACCESS_TOKEN = os.environ["TMG_API_TOKEN"]
+
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        Auth = request.headers.get("Authorization", "")
+        if not Auth:
+            return {"message": "Authorization Required in Header"}, 401
+
+        elif Auth[7:] != ACCESS_TOKEN:
+            return {"message": "UnAuthorized Access! Credentials Incorrect"}, 401
+
+        return f(*args, **kwargs)
+
+    return decorated_function
 
 
 class GetTeams(Resource):
+    @login_required
     def get(self):
-        # print(request.authorization)
-        # print(request.headers)
-        # print(dir(request))
 
         list_of_teams = obj.get_teams()
         return list_of_teams
@@ -39,10 +57,9 @@ class AddPlayers(Resource):
             help="player/s to add was not provided <players separated by a comma>",
             location="json",
         )
-        # self.reqparse.add_argument('description', type=str, default="",
-        #                            location='json')
         super(AddPlayers, self).__init__()
 
+    @login_required
     def post(self):
         args = self.reqparse.parse_args()
         # print(args["players"])
@@ -86,6 +103,7 @@ class DeletePlayers(Resource):
         )
         super(DeletePlayers, self).__init__()
 
+    @login_required
     def delete(self):
         args = self.reqparse.parse_args()
 
@@ -127,6 +145,7 @@ class UpdateTeamNum(Resource):
         )
         super(UpdateTeamNum, self).__init__()
 
+    @login_required
     def post(self):
         args = self.reqparse.parse_args()
         resp = obj.update_mode(args["data"])
@@ -149,6 +168,7 @@ class ActivatePlayers(Resource):
         )
         super(ActivatePlayers, self).__init__()
 
+    @login_required
     def post(self):
         args = self.reqparse.parse_args()
 
@@ -203,6 +223,7 @@ class DeactivatePlayers(Resource):
         )
         super(DeactivatePlayers, self).__init__()
 
+    @login_required
     def post(self):
         args = self.reqparse.parse_args()
 
