@@ -110,7 +110,7 @@ class App:
         data = json_local_load()
         data["names"] = list(map(lambda x: x.title(), data["names"]))
 
-        if name.title() in map(lambda x: x.title(), data["names"]):
+        if name.title() in data["names"]:
             response = {
                 "status": "error",
                 "message": "Duplicate Error, Name Taken",
@@ -135,7 +135,7 @@ class App:
         data = json_local_load()
         data["names"] = list(map(lambda x: x.title(), data["names"]))
 
-        if name.title() and name.title() in data["names"]:
+        if name and name.title() in data["names"]:
             data["names"].remove(name.title())
 
             json_local_write(data)
@@ -175,6 +175,62 @@ class App:
         self.team_list = data["names"]
         del self.player_obj
         self.generate_player()
+
+    def add_to_balance(self, name):
+        data = json_local_load()
+        data["balance"] = list(map(lambda x: x.title(), data["balance"]))
+        data["names"] = list(map(lambda x: x.title(), data["names"]))
+
+        if name.title() in data["balance"]:
+            response = {
+                "status": "ok_2",
+                "message": "Player already in list",
+                "name": f"{name.title()}",
+            }
+        elif name and name.title() in data["names"]:
+            data["balance"].append(name.title())
+
+            json_local_write(data)
+            self.refresh_all_data(data)
+
+            response = {
+                "status": "ok",
+                "message": "Player Added to balance list",
+                "name": f"{name.title()}",
+            }
+        else:
+            response = {
+                "status": "error",
+                "message": "Player does not exist. Add to players first",
+                "name": f"{name.title()}",
+            }
+
+        return response
+
+    def delete_from_balance(self, name):
+
+        data = json_local_load()
+        data["balance"] = list(map(lambda x: x.title(), data["balance"]))
+
+        if name and name.title() in data["balance"]:
+            data["balance"].remove(name.title())
+
+            json_local_write(data)
+            self.refresh_all_data(data)
+
+            response = {
+                "status": "ok",
+                "message": "Player Deleted from balance list",
+                "name": f"{name.title()}",
+            }
+        else:
+            response = {
+                "status": "error",
+                "message": "Delete Failed. Name not in balance List",
+                "name": f"{name.title()}",
+            }
+
+        return response
 
 
 class Person:

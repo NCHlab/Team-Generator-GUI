@@ -266,12 +266,107 @@ class DeactivatePlayers(Resource):
         return response
 
 
+class AddToBalance(Resource):
+    def __init__(self):
+        self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument(
+            "data",
+            type=str,
+            required=True,
+            help="player/s to add was not provided <players separated by a comma>",
+            location="json",
+        )
+        super(AddToBalance, self).__init__()
+
+    @login_required
+    def post(self):
+        args = self.reqparse.parse_args()
+
+        players_list = args["data"].split(",")
+        players_list = [x.strip().title() for x in players_list]
+
+        returned_data = []
+        for player in players_list:
+            resp = obj.add_to_balance(player)
+            returned_data.append(resp)
+
+        players_ok = list(
+            filter(
+                lambda x: x["status"] == "ok" or x["status"] == "ok_2", returned_data
+            )
+        )
+
+        if len(returned_data) == len(players_ok):
+            players_ok = list(map(lambda x: x["name"], players_ok))
+            response = (
+                {"text": f"Users Added to Balance: {', '.join(players_ok)}"},
+                201,
+            )
+        else:
+            players_error = list(
+                filter(lambda x: x["status"] == "error", returned_data)
+            )
+            players_error = list(map(lambda x: x["name"], players_error))
+            response = (
+                {"text": f"Players do not exist: {', '.join(players_error)}"},
+                409,
+            )
+
+        return response
+
+
+class DeleteFromBalance(Resource):
+    def __init__(self):
+        self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument(
+            "data",
+            type=str,
+            required=True,
+            help="player/s to delete was not provided <players separated by a comma>",
+            location="json",
+        )
+        super(DeleteFromBalance, self).__init__()
+
+    @login_required
+    def delete(self):
+        args = self.reqparse.parse_args()
+
+        players_list = args["data"].split(",")
+        players_list = [x.strip().title() for x in players_list]
+
+        returned_data = []
+        for player in players_list:
+            resp = obj.delete_from_balance(player)
+            returned_data.append(resp)
+
+        players_ok = list(filter(lambda x: x["status"] == "ok", returned_data))
+
+        if len(returned_data) == len(players_ok):
+            players_ok = list(map(lambda x: x["name"], players_ok))
+            response = ({"text": f"Users Removed: {', '.join(players_ok)}"}, 200)
+        else:
+            players_error = list(
+                filter(lambda x: x["status"] == "error", returned_data)
+            )
+            players_error = list(map(lambda x: x["name"], players_error))
+            response = (
+                {
+                    "text": f"Players don't exist in balance list: {', '.join(players_error)}"
+                },
+                404,
+            )
+
+        return response
+
+
 api.add_resource(GetTeams, "/get_teams")
 api.add_resource(AddPlayers, "/add")
 api.add_resource(DeletePlayers, "/delete")
 api.add_resource(UpdateTeamNum, "/update_team_number")
 api.add_resource(ActivatePlayers, "/activate")
 api.add_resource(DeactivatePlayers, "/deactivate")
+api.add_resource(AddToBalance, "/add_b")
+api.add_resource(DeleteFromBalance, "/delete_b")
 
 # api.add_resource(Baz, '/Baz', '/Baz/<string:id>')
 
