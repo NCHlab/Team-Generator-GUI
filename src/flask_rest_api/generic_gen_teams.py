@@ -374,5 +374,3 @@ if __name__ == "__main__":
             file_error(response)
 
     obj = App()
-
-    print("test")

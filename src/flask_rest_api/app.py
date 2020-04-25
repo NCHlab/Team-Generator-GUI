@@ -1,10 +1,15 @@
 import os
 from functools import wraps
+import json
+import copy
 
 from flask_restful import Api, Resource, reqparse
-from flask import Flask, Blueprint, request
-from generic_gen_teams import App
+from flask import Flask, Blueprint, request, Response
+from generic_gen_teams import App, json_local_load, split_list
 
+import requests
+import threading
+from constants import PLAYER_MODAL_OBJ, PLAYER_CHECKBOX
 
 # from flask_restful import Api
 # from myapi.resources.add_players import AddPlayers
@@ -22,6 +27,10 @@ obj = App()
 
 # Require Token to use the API
 ACCESS_TOKEN = os.environ["TMG_API_TOKEN"]
+SLACK_TOKEN = os.environ["SLACK_TOKEN"]
+
+list_of_teams = []
+slack_player_data = []
 
 
 def login_required(f):
@@ -39,12 +48,146 @@ def login_required(f):
     return decorated_function
 
 
+def create_slack_modal(triggerid):
+
+    team_data = json_local_load()
+    player_names = team_data["names"]
+
+    PLAYER_MODAL_OBJ["trigger_id"] = triggerid
+
+    option_list = []
+
+    for e, name in enumerate(player_names):
+
+        newdict = copy.deepcopy(PLAYER_CHECKBOX)
+        newdict["text"]["text"] = name
+        newdict["value"] = name
+        option_list.append(newdict)
+
+    PLAYER_MODAL_OBJ["view"]["blocks"][5]["accessory"]["options"] = option_list
+
+    # print(PLAYER_MODAL_OBJ)
+
+    return PLAYER_MODAL_OBJ
+
+
+def send_slack_modal(triggerid):
+
+    data = create_slack_modal(triggerid)
+
+    res = requests.post(
+        "https://slack.com/api/views.open",
+        json=data,
+        headers={
+            "Content-Type": "application/json;charset=utf-8",
+            "Authorization": SLACK_TOKEN,
+        },
+    )
+
+    # resp = res.json()
+    # print(resp)
+
+
+def activate_players_post_to_slack(users_selected, num_of_team, response_url):
+
+    obj.set_all_players(activate=False)
+    obj.update_mode(int(num_of_team))
+
+    for player in users_selected:
+        obj.activate_player(player)
+
+    user_teams = obj.get_teams()
+    print(user_teams)
+
+    for e, team in enumerate(user_teams):
+
+        resp = requests.post(
+            response_url,
+            json={
+                "response_type": "in_channel",
+                "text": f"TEAM {e+1}\n" + "\n".join(team),
+            },
+            headers={"Content-Type": "application/json;charset=utf-8"},
+        )
+
+        print(resp.status_code)
+        print(resp.text)
+
+
+class SlackData(Resource):
+    def post(self):
+        data = dict(request.form)
+        data["payload"] = json.loads(data["payload"])
+
+        thread = threading.Thread(target=self.process_tg_modal_data, args=(data,))
+        thread.start()
+        return Response(status=200)
+
+    def process_tg_modal_data(self, data):
+        global slack_player_data
+
+        if data["payload"]["type"] == "block_actions":
+            slack_player_data.append(data)
+            # print("ADDED TO PLAYER_DATA")
+        elif data["payload"]["type"] == "view_submission":
+
+            num_of_team = data["payload"]["view"]["state"]["values"]["num_of_teams"][
+                "num_of_teams_action"
+            ]["selected_option"]["value"]
+            response_url = data["payload"]["response_urls"][0]["response_url"]
+
+            # print(slack_player_data)
+            # print(response_url)
+            # print(num_of_team)
+            # print(slack_player_data[-1]["payload"]["actions"][0]["selected_options"])
+
+            users_selected = list(
+                map(
+                    lambda x: x["value"],
+                    slack_player_data[-1]["payload"]["actions"][0]["selected_options"],
+                )
+            )
+            # print(users_selected)
+
+            # Emptying Global Object
+            slack_player_data = []
+
+            activate_players_post_to_slack(users_selected, num_of_team, response_url)
+
+
+class SlackInitialMsg(Resource):
+    def post(self):
+        data = dict(request.form)
+
+        triggerid = data["trigger_id"]
+
+        # Start a different thread to process the post request for modal
+        thread = threading.Thread(target=send_slack_modal, args=(triggerid,))
+        thread.start()
+
+        # Immediately send back empty HTTP 200 response
+        return Response(status=200)
+
+
 class GetTeams(Resource):
-    @login_required
+    # @login_required
     def get(self):
 
-        list_of_teams = obj.get_teams()
-        return list_of_teams
+        global list_of_teams
+
+        # Only Allow Authorised users to generate new team, otherwise return ucnahnged list
+        Auth = request.headers.get("Authorization", "")
+        if Auth[7:] == ACCESS_TOKEN:
+            list_of_teams = obj.get_teams()
+
+        elif not list_of_teams:
+            list_of_teams = obj.get_teams()
+
+        formatted_obj = {}
+        for e, i in enumerate(list_of_teams):
+            formatted_obj[f"TEAM {e+1}"] = i
+
+        return formatted_obj
 
 
 class AddPlayers(Resource):
@@ -367,6 +510,8 @@ api.add_resource(ActivatePlayers, "/activate")
 api.add_resource(DeactivatePlayers, "/deactivate")
 api.add_resource(AddToBalance, "/add_b")
 api.add_resource(DeleteFromBalance, "/delete_b")
+api.add_resource(SlackData, "/slack")
+api.add_resource(SlackInitialMsg, "/mainmodal")
 
 # api.add_resource(Baz, '/Baz', '/Baz/<string:id>')
 
