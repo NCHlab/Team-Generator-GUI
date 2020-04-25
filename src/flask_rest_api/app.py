@@ -1,10 +1,13 @@
 import os
 from functools import wraps
+import json
 
 from flask_restful import Api, Resource, reqparse
-from flask import Flask, Blueprint, request
+from flask import Flask, Blueprint, request, Response
 from generic_gen_teams import App
 
+import requests
+import threading
 
 # from flask_restful import Api
 # from myapi.resources.add_players import AddPlayers
@@ -22,6 +25,9 @@ obj = App()
 
 # Require Token to use the API
 ACCESS_TOKEN = os.environ["TMG_API_TOKEN"]
+SLACK_TOKEN = os.environ["SLACK_TOKEN"]
+
+list_of_teams = []
 
 
 def login_required(f):
@@ -39,12 +45,112 @@ def login_required(f):
     return decorated_function
 
 
+def create_slack_modal():
+    list_of_teams = obj.get_teams()
+    return list_of_teams
+
+
+def send_slack_modal(testobj):
+
+    data = create_slack_modal()
+
+    res = requests.post(
+        "https://slack.com/api/views.open",
+        json=testobj,
+        headers={
+            "Content-Type": "application/json;charset=utf-8",
+            "Authorization": SLACK_TOKEN,
+        },
+    )
+
+    resp = res.json()
+
+    print(resp)
+
+
+class SlackData(Resource):
+    def post(self):
+        data = dict(request.form)
+
+        print(data)
+
+
+class SlackInitialMsg(Resource):
+    def post(self):
+        data = dict(request.form)
+
+        triggerid = data["trigger_id"]
+
+        test_modal_obj = {
+            "trigger_id": triggerid,
+            "view": {
+                "type": "modal",
+                "title": {"type": "plain_text", "text": "Modal title"},
+                "blocks": [
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "It's Block Kit...but _in a modal_",
+                        },
+                        "block_id": "section1",
+                        "accessory": {
+                            "type": "button",
+                            "text": {"type": "plain_text", "text": "Click me"},
+                            "action_id": "button_abc",
+                            "value": "Button value",
+                            "style": "danger",
+                        },
+                    },
+                    {
+                        "type": "input",
+                        "label": {"type": "plain_text", "text": "Input label"},
+                        "element": {
+                            "type": "plain_text_input",
+                            "action_id": "input1",
+                            "placeholder": {
+                                "type": "plain_text",
+                                "text": "Type in here",
+                            },
+                            "multiline": False,
+                        },
+                        "optional": False,
+                    },
+                ],
+                "close": {"type": "plain_text", "text": "Cancel"},
+                "submit": {"type": "plain_text", "text": "Save"},
+                "private_metadata": "Shhhhhhhh",
+                "callback_id": "view_identifier_12",
+            },
+        }
+
+        # Start a different thread to process the post request for modal
+        thread = threading.Thread(target=send_slack_modal, args=(test_modal_obj,))
+        thread.start()
+
+        # Immediately send back empty HTTP 200 response
+        return Response(status=200)
+
+
 class GetTeams(Resource):
-    @login_required
+    # @login_required
     def get(self):
 
-        list_of_teams = obj.get_teams()
-        return list_of_teams
+        global list_of_teams
+
+        # Only Allow Authorised users to generate new team, otherwise return ucnahnged list
+        Auth = request.headers.get("Authorization", "")
+        if Auth[7:] == ACCESS_TOKEN:
+            list_of_teams = obj.get_teams()
+
+        elif not list_of_teams:
+            list_of_teams = obj.get_teams()
+
+        formatted_obj = {}
+        for e, i in enumerate(list_of_teams):
+            formatted_obj[f"TEAM {e+1}"] = i
+
+        return formatted_obj
 
 
 class AddPlayers(Resource):
@@ -367,6 +473,8 @@ api.add_resource(ActivatePlayers, "/activate")
 api.add_resource(DeactivatePlayers, "/deactivate")
 api.add_resource(AddToBalance, "/add_b")
 api.add_resource(DeleteFromBalance, "/delete_b")
+api.add_resource(SlackData, "/slack")
+api.add_resource(SlackInitialMsg, "/mainmodal")
 
 # api.add_resource(Baz, '/Baz', '/Baz/<string:id>')
 
