@@ -45,18 +45,112 @@ def login_required(f):
     return decorated_function
 
 
-def create_slack_modal():
-    list_of_teams = obj.get_teams()
-    return list_of_teams
+def create_slack_modal(triggerid):
+    # list_of_teams = obj.get_teams()
+
+    test_modal_obj = {
+        "trigger_id": triggerid,
+        "view": {
+            "type": "modal",
+            "title": {"type": "plain_text", "text": "Team Generator"},
+            "submit": {"type": "plain_text", "text": "Submit", "emoji": True},
+            "close": {"type": "plain_text", "text": "Cancel", "emoji": True},
+            "blocks": [
+                {"type": "divider"},
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": ":ghost: *Select Players to generate a team*",
+                    },
+                },
+                {"type": "divider"},
+                {
+                    "block_id": "channel_to_post",
+                    "type": "input",
+                    "optional": True,
+                    "label": {
+                        "type": "plain_text",
+                        "text": "Select a channel to post the result on",
+                    },
+                    "element": {
+                        "action_id": "send_to_channel",
+                        "type": "channels_select",
+                        "response_url_enabled": True,
+                    },
+                },
+                {
+                    "type": "input",
+                    "block_id": "num_of_teams",
+                    "label": {"type": "plain_text", "text": "Select Number Of Teams",},
+                    "element": {
+                        "type": "static_select",
+                        "action_id": "num_of_teams_action",
+                        "initial_option": {
+                            "text": {"type": "plain_text", "text": "2"},
+                            "value": "2",
+                        },
+                        "options": [
+                            {
+                                "text": {"type": "plain_text", "text": "1"},
+                                "value": "1",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "2"},
+                                "value": "2",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "3"},
+                                "value": "3",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "4"},
+                                "value": "4",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "5"},
+                                "value": "5",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "6"},
+                                "value": "6",
+                            },
+                        ],
+                    },
+                },
+                {
+                    "type": "input",
+                    "block_id": "player_list",
+                    "label": {"type": "plain_text", "text": "Players", "emoji": True,},
+                    "element": {
+                        "type": "checkboxes",
+                        "action_id": "player_list_action",
+                        "options": [
+                            {
+                                "text": {"type": "plain_text", "text": "Player1"},
+                                "value": "Player1",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Player2"},
+                                "value": "Player2",
+                            },
+                        ],
+                    },
+                },
+            ],
+        },
+    }
+
+    return test_modal_obj
 
 
-def send_slack_modal(testobj):
+def send_slack_modal(triggerid):
 
-    data = create_slack_modal()
+    data = create_slack_modal(triggerid)
 
     res = requests.post(
         "https://slack.com/api/views.open",
-        json=testobj,
+        json=data,
         headers={
             "Content-Type": "application/json;charset=utf-8",
             "Authorization": SLACK_TOKEN,
@@ -66,6 +160,27 @@ def send_slack_modal(testobj):
     resp = res.json()
 
     print(resp)
+    process_tg_modal_data(resp)
+
+
+def process_tg_modal_data(data):
+
+    response_url = data["payload"]["response_urls"][0]["response_url"]
+
+    data = data["payload"]["view"]["state"]["values"]
+
+    num_of_team = data["num_of_teams"]["num_of_teams_action"]["selected_option"][
+        "value"
+    ]
+    players_data = data["player_list"]["player_list_action"]["selected_options"]
+
+    list_of_players = []
+
+    for player in players_data:
+        list_of_players.append(player["value"])
+
+    # print(data["payload"]["view"]["state"]["values"]["num_of_teams"]["num_of_teams_action"]["selected_option"]["value"])
+    # data["payload"]["view"]["state"]["values"]["player_list"]["player_list_action"]["selected_options"]
 
 
 class SlackData(Resource):
@@ -73,6 +188,7 @@ class SlackData(Resource):
         data = dict(request.form)
 
         print(data)
+        return Response(status=200)
 
 
 class SlackInitialMsg(Resource):
@@ -81,51 +197,8 @@ class SlackInitialMsg(Resource):
 
         triggerid = data["trigger_id"]
 
-        test_modal_obj = {
-            "trigger_id": triggerid,
-            "view": {
-                "type": "modal",
-                "title": {"type": "plain_text", "text": "Modal title"},
-                "blocks": [
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "It's Block Kit...but _in a modal_",
-                        },
-                        "block_id": "section1",
-                        "accessory": {
-                            "type": "button",
-                            "text": {"type": "plain_text", "text": "Click me"},
-                            "action_id": "button_abc",
-                            "value": "Button value",
-                            "style": "danger",
-                        },
-                    },
-                    {
-                        "type": "input",
-                        "label": {"type": "plain_text", "text": "Input label"},
-                        "element": {
-                            "type": "plain_text_input",
-                            "action_id": "input1",
-                            "placeholder": {
-                                "type": "plain_text",
-                                "text": "Type in here",
-                            },
-                            "multiline": False,
-                        },
-                        "optional": False,
-                    },
-                ],
-                "close": {"type": "plain_text", "text": "Cancel"},
-                "submit": {"type": "plain_text", "text": "Save"},
-                "private_metadata": "Shhhhhhhh",
-                "callback_id": "view_identifier_12",
-            },
-        }
-
         # Start a different thread to process the post request for modal
-        thread = threading.Thread(target=send_slack_modal, args=(test_modal_obj,))
+        thread = threading.Thread(target=send_slack_modal, args=(triggerid,))
         thread.start()
 
         # Immediately send back empty HTTP 200 response
