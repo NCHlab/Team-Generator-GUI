@@ -1,13 +1,15 @@
 import os
 from functools import wraps
 import json
+import copy
 
 from flask_restful import Api, Resource, reqparse
 from flask import Flask, Blueprint, request, Response
-from generic_gen_teams import App
+from generic_gen_teams import App, json_local_load, split_list
 
 import requests
 import threading
+from constants import PLAYER_MODAL_OBJ, PLAYER_CHECKBOX
 
 # from flask_restful import Api
 # from myapi.resources.add_players import AddPlayers
@@ -28,6 +30,7 @@ ACCESS_TOKEN = os.environ["TMG_API_TOKEN"]
 SLACK_TOKEN = os.environ["SLACK_TOKEN"]
 
 list_of_teams = []
+slack_player_data = []
 
 
 def login_required(f):
@@ -46,102 +49,26 @@ def login_required(f):
 
 
 def create_slack_modal(triggerid):
-    # list_of_teams = obj.get_teams()
 
-    test_modal_obj = {
-        "trigger_id": triggerid,
-        "view": {
-            "type": "modal",
-            "title": {"type": "plain_text", "text": "Team Generator"},
-            "submit": {"type": "plain_text", "text": "Submit", "emoji": True},
-            "close": {"type": "plain_text", "text": "Cancel", "emoji": True},
-            "blocks": [
-                {"type": "divider"},
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": ":ghost: *Select Players to generate a team*",
-                    },
-                },
-                {"type": "divider"},
-                {
-                    "block_id": "channel_to_post",
-                    "type": "input",
-                    "optional": True,
-                    "label": {
-                        "type": "plain_text",
-                        "text": "Select a channel to post the result on",
-                    },
-                    "element": {
-                        "action_id": "send_to_channel",
-                        "type": "channels_select",
-                        "response_url_enabled": True,
-                    },
-                },
-                {
-                    "type": "input",
-                    "block_id": "num_of_teams",
-                    "label": {"type": "plain_text", "text": "Select Number Of Teams",},
-                    "element": {
-                        "type": "static_select",
-                        "action_id": "num_of_teams_action",
-                        "initial_option": {
-                            "text": {"type": "plain_text", "text": "2"},
-                            "value": "2",
-                        },
-                        "options": [
-                            {
-                                "text": {"type": "plain_text", "text": "1"},
-                                "value": "1",
-                            },
-                            {
-                                "text": {"type": "plain_text", "text": "2"},
-                                "value": "2",
-                            },
-                            {
-                                "text": {"type": "plain_text", "text": "3"},
-                                "value": "3",
-                            },
-                            {
-                                "text": {"type": "plain_text", "text": "4"},
-                                "value": "4",
-                            },
-                            {
-                                "text": {"type": "plain_text", "text": "5"},
-                                "value": "5",
-                            },
-                            {
-                                "text": {"type": "plain_text", "text": "6"},
-                                "value": "6",
-                            },
-                        ],
-                    },
-                },
-                {
-                    "type": "input",
-                    "block_id": "player_list",
-                    "label": {"type": "plain_text", "text": "Players", "emoji": True,},
-                    "element": {
-                        "type": "checkboxes",
-                        "action_id": "player_list_action",
-                        "options": [
-                            {
-                                "text": {"type": "plain_text", "text": "Player1"},
-                                "value": "Player1",
-                            },
-                            {
-                                "text": {"type": "plain_text", "text": "Player2"},
-                                "value": "Player2",
-                            },
-                        ],
-                    },
-                },
-            ],
-        },
-    }
+    team_data = json_local_load()
+    player_names = team_data["names"]
 
-    return test_modal_obj
+    PLAYER_MODAL_OBJ["trigger_id"] = triggerid
+
+    option_list = []
+
+    for e, name in enumerate(player_names):
+
+        newdict = copy.deepcopy(PLAYER_CHECKBOX)
+        newdict["text"]["text"] = name
+        newdict["value"] = name
+        option_list.append(newdict)
+
+    PLAYER_MODAL_OBJ["view"]["blocks"][5]["accessory"]["options"] = option_list
+
+    # print(PLAYER_MODAL_OBJ)
+
+    return PLAYER_MODAL_OBJ
 
 
 def send_slack_modal(triggerid):
@@ -157,38 +84,75 @@ def send_slack_modal(triggerid):
         },
     )
 
-    resp = res.json()
-
-    print(resp)
-    process_tg_modal_data(resp)
+    # resp = res.json()
+    # print(resp)
 
 
-def process_tg_modal_data(data):
+def activate_players_post_to_slack(users_selected, num_of_team, response_url):
 
-    response_url = data["payload"]["response_urls"][0]["response_url"]
+    obj.set_all_players(activate=False)
+    obj.update_mode(int(num_of_team))
 
-    data = data["payload"]["view"]["state"]["values"]
+    for player in users_selected:
+        obj.activate_player(player)
 
-    num_of_team = data["num_of_teams"]["num_of_teams_action"]["selected_option"][
-        "value"
-    ]
-    players_data = data["player_list"]["player_list_action"]["selected_options"]
+    user_teams = obj.get_teams()
+    print(user_teams)
 
-    list_of_players = []
+    for e, team in enumerate(user_teams):
 
-    for player in players_data:
-        list_of_players.append(player["value"])
+        resp = requests.post(
+            response_url,
+            json={
+                "response_type": "in_channel",
+                "text": f"TEAM {e+1}\n" + "\n".join(team),
+            },
+            headers={"Content-Type": "application/json;charset=utf-8"},
+        )
 
-    # print(data["payload"]["view"]["state"]["values"]["num_of_teams"]["num_of_teams_action"]["selected_option"]["value"])
-    # data["payload"]["view"]["state"]["values"]["player_list"]["player_list_action"]["selected_options"]
+        print(resp.status_code)
+        print(resp.text)
 
 
 class SlackData(Resource):
     def post(self):
         data = dict(request.form)
+        data["payload"] = json.loads(data["payload"])
 
-        print(data)
+        thread = threading.Thread(target=self.process_tg_modal_data, args=(data,))
+        thread.start()
         return Response(status=200)
+
+    def process_tg_modal_data(self, data):
+        global slack_player_data
+
+        if data["payload"]["type"] == "block_actions":
+            slack_player_data.append(data)
+            # print("ADDED TO PLAYER_DATA")
+        elif data["payload"]["type"] == "view_submission":
+
+            num_of_team = data["payload"]["view"]["state"]["values"]["num_of_teams"][
+                "num_of_teams_action"
+            ]["selected_option"]["value"]
+            response_url = data["payload"]["response_urls"][0]["response_url"]
+
+            # print(slack_player_data)
+            # print(response_url)
+            # print(num_of_team)
+            # print(slack_player_data[-1]["payload"]["actions"][0]["selected_options"])
+
+            users_selected = list(
+                map(
+                    lambda x: x["value"],
+                    slack_player_data[-1]["payload"]["actions"][0]["selected_options"],
+                )
+            )
+            # print(users_selected)
+
+            # Emptying Global Object
+            slack_player_data = []
+
+            activate_players_post_to_slack(users_selected, num_of_team, response_url)
 
 
 class SlackInitialMsg(Resource):
